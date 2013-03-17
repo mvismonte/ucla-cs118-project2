@@ -22,6 +22,31 @@
 #include "sr_arpcache.h"
 #include "sr_utils.h"
 
+/* Helpers */
+struct sr_rt* find_route(struct sr_instance* sr, uint32_t ip_dst) {
+  struct sr_rt* rt_entry = 0;
+
+  if (sr->routing_table == 0) {
+    fprintf(stderr, "Routing table empty\n");
+    return 0;
+  } else {
+    rt_entry = sr->routing_table;
+
+    while (rt_entry) {
+      sr_print_routing_entry(rt_entry);  /* DEBUG */
+
+      /* Check masked destination to routing table entry */
+      if ((ip_dst & (rt_entry->mask).s_addr) == (rt_entry->dest).s_addr) {
+        /* Route found */
+        return rt_entry;
+      }
+
+      rt_entry = rt_entry->next;
+    }
+  }
+  return 0;
+}
+
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -108,34 +133,21 @@ void sr_handlepacket(struct sr_instance* sr,
     }
 
     /* Routing Table lookup */
-    struct sr_rt* rt_entry = 0;
+    struct sr_rt* route = find_route(sr, iphdr->ip_dst);
 
-    if (sr->routing_table == 0) {
-        fprintf(stderr, "Routing table empty\n");
-    } else {
-      rt_entry = sr->routing_table;
+    if (route) {
+      /* Route exists */
 
-      while (rt_entry) {
-        sr_print_routing_entry(rt_entry);  /* DEBUG */
-
-        /* Check masked destination to routing table entry */
-        if ((iphdr->ip_dst & (rt_entry->mask).s_addr) == (rt_entry->dest).s_addr) {
-          /* Route found */
-          break;
+      if (iphdr->ip_p == ip_protocol_icmp) {/* ICMP */
+        minlength += sizeof(sr_icmp_hdr_t);
+        if (len < minlength) {
+          fprintf(stderr, "ICMP header: insufficient length\n");
+          return;
         }
-
-        rt_entry = rt_entry->next;
       }
-    }
 
-
-
-    if (iphdr->ip_p == ip_protocol_icmp) { /* ICMP */
-      minlength += sizeof(sr_icmp_hdr_t);
-      if (len < minlength) {
-        fprintf(stderr, "ICMP header: insufficient length\n");
-        return;
-      }
+    } else {
+      /* Forward */
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
