@@ -117,6 +117,7 @@ void sr_handlepacket(struct sr_instance* sr,
     minlength += sizeof(sr_ip_hdr_t);
     if (len < minlength) {
       fprintf(stderr, "IP header: insufficient length\n");
+      return;
     }
 
     print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
@@ -132,10 +133,10 @@ void sr_handlepacket(struct sr_instance* sr,
       return;
     }
 
-    /* Routing Table lookup */
-    struct sr_rt* route = find_route(sr, iphdr->ip_dst);
+    /* TODO */
+    int self = 0;
 
-    if (route) {
+    if (self) {
       /* Route exists */
 
       if (iphdr->ip_p == ip_protocol_icmp) {/* ICMP */
@@ -148,6 +149,9 @@ void sr_handlepacket(struct sr_instance* sr,
 
     } else {
       /* Forward */
+
+      /* Routing Table lookup */
+      struct sr_rt* route = find_route(sr, iphdr->ip_dst);
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
