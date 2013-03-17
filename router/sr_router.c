@@ -107,6 +107,29 @@ void sr_handlepacket(struct sr_instance* sr,
       return;
     }
 
+    /* Routing Table lookup */
+    struct sr_rt* rt_entry = 0;
+
+    if (sr->routing_table == 0) {
+        fprintf(stderr, "Routing table empty\n");
+    } else {
+      rt_entry = sr->routing_table;
+
+      while (rt_entry) {
+        sr_print_routing_entry(rt_entry);  /* DEBUG */
+
+        /* Check masked destination to routing table entry */
+        if ((iphdr->ip_dst & (rt_entry->mask).s_addr) == (rt_entry->dest).s_addr) {
+          /* Route found */
+          break;
+        }
+
+        rt_entry = rt_entry->next;
+      }
+    }
+
+
+
     if (iphdr->ip_p == ip_protocol_icmp) { /* ICMP */
       minlength += sizeof(sr_icmp_hdr_t);
       if (len < minlength) {
