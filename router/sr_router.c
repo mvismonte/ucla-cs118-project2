@@ -78,7 +78,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n",len);
 
-  print_hdrs(packet, len);  /* DEBUG */
+  print_hdr_eth(packet);  /* DEBUG */
 
   int minlength = sizeof(sr_ethernet_hdr_t);
   if (len < minlength) {
@@ -94,9 +94,20 @@ void sr_handlepacket(struct sr_instance* sr,
       fprintf(stderr, "IP header: insufficient length\n");
     }
 
-    uint8_t ip_proto = ip_protocol(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
 
-    if (ip_proto == ip_protocol_icmp) { /* ICMP */
+    /* Create IP Packet */
+    sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+
+    uint16_t ip_checksum = iphdr->ip_sum;
+    iphdr->ip_sum = 0;
+
+    if (cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t)) != ip_checksum) {
+      fprintf(stderr, "IP: invalid checksum\n");
+      return;
+    }
+
+    if (iphdr->ip_p == ip_protocol_icmp) { /* ICMP */
       minlength += sizeof(sr_icmp_hdr_t);
       if (len < minlength) {
         fprintf(stderr, "ICMP header: insufficient length\n");
@@ -110,6 +121,7 @@ void sr_handlepacket(struct sr_instance* sr,
       fprintf(stderr, "ARP header: insufficient length\n");
       return;
     }
+    printf("*** -> ARP Request\n");
   }
   else {
     fprintf(stderr, "Unrecognized Ethernet Type: %d\n", ethtype);
