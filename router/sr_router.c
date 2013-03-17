@@ -78,7 +78,43 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n",len);
 
-  /* fill in code here */
+  print_hdrs(packet, len);  /* DEBUG */
+
+  int minlength = sizeof(sr_ethernet_hdr_t);
+  if (len < minlength) {
+    fprintf(stderr, "ETHERNET header: insufficient length\n");
+    return;
+  }
+
+  uint16_t ethtype = ethertype(packet);
+
+  if (ethtype == ethertype_ip) { /* IP */
+    minlength += sizeof(sr_ip_hdr_t);
+    if (len < minlength) {
+      fprintf(stderr, "IP header: insufficient length\n");
+    }
+
+    uint8_t ip_proto = ip_protocol(packet + sizeof(sr_ethernet_hdr_t));
+
+    if (ip_proto == ip_protocol_icmp) { /* ICMP */
+      minlength += sizeof(sr_icmp_hdr_t);
+      if (len < minlength) {
+        fprintf(stderr, "ICMP header: insufficient length\n");
+        return;
+      }
+    }
+  }
+  else if (ethtype == ethertype_arp) { /* ARP */
+    minlength += sizeof(sr_arp_hdr_t);
+    if (len < minlength) {
+      fprintf(stderr, "ARP header: insufficient length\n");
+      return;
+    }
+  }
+  else {
+    fprintf(stderr, "Unrecognized Ethernet Type: %d\n", ethtype);
+    return;
+  }
 
 }/* end sr_ForwardPacket */
 
