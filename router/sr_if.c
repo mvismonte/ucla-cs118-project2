@@ -203,14 +203,13 @@ struct sr_if* sr_find_interface(struct sr_instance* sr, uint32_t ip_dst) {
 
   if (sr->if_list == 0) {
     fprintf(stderr, "Interfaces empty\n");
-    return 0;
+    return NULL;
   } else {
     if_entry = sr->if_list;
 
     fprintf(stderr, "*** -> Checking interfaces\n");
     while (if_entry) {
-      sr_print_if(if_entry);  /* DEBUG */
-
+      /*sr_print_if(if_entry);  DEBUG */
       if (ip_dst == if_entry->ip) {
         /* Interface found */
         return if_entry;
@@ -219,5 +218,5 @@ struct sr_if* sr_find_interface(struct sr_instance* sr, uint32_t ip_dst) {
       if_entry = if_entry->next;
     }
   }
-  return 0;
+  return NULL;
 }

@@ -148,23 +148,37 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int 
 
   } else {
     /* Forward the Packet */
-    printf("*** -> Forwarding packet\n");
+    printf("*** -> Forwarding Process Initiated\n");
 
     /* Routing Table lookup */
     struct sr_rt* route = sr_find_rt_entry(sr, iphdr->ip_dst);
     struct sr_arpcache* arp_cache = &sr->cache;
+
+    /* TODO(mark|tim|jon): Error checking
+      If the route does not exist, send ICMP host unreachable
+     */
+
+    /* Decrement the TTL */
+    iphdr->ip_ttl--;
+    if (iphdr->ip_ttl == 0) {
+      printf("*** -> Packet TTL expired.\n");
+      /* TODO(mark|tim|jon): Send back ICMP time exceeded */
+      return 0;
+    }
+
     struct sr_arpentry* arp_entry = sr_arpcache_lookup(arp_cache, route->gw.s_addr);
 
     if (arp_entry) {
       printf("*** -> ARP Cache Hit\n");
       /* Forward the packet */
-      sr_forward_eth_packet(sr, packet, len, arp_entry->mac, iface);
+      sr_forward_eth_packet(sr, packet, len, arp_entry->mac, route->interface);
 
       /* Free ARP entry */
       free(arp_entry);
     } else {
       printf("*** -> ARP Cache Miss\n");
-      struct sr_arpreq* req = sr_arpcache_queuereq(arp_cache, route->gw.s_addr, packet, len, iface);
+      struct sr_arpreq* req = sr_arpcache_queuereq(arp_cache, route->gw.s_addr, packet, len, route->interface);
+      req->iface = route->interface;
       sr_handle_arpreq(sr, req);
     }
   }
@@ -173,9 +187,22 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int 
 }
 
 int sr_forward_eth_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface) {
-  /* Set fields in Ethernet pack for quick forwarding and send */
+  printf("*** -> Forwarding Packet\n");
+
+  /* Created the packet */
   sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
+  sr_ip_hdr_t* ip_hdr = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
+  struct sr_if* interface = sr_get_interface(sr, iface);
+
+  /* Set fields */
   memcpy(e_packet->ether_dhost, mac, ETHER_ADDR_LEN);
+  memcpy(e_packet->ether_shost, interface->addr, ETHER_ADDR_LEN);
+
+  /* Update IP checksum */
+  ip_hdr->ip_sum = cksum((uint8_t*) ip_hdr, sizeof(sr_ip_hdr_t));
+
+  /* Send the packet */
+  print_hdrs(packet, len);
   sr_send_packet(sr, packet, len, iface);
   return 0;
 }
