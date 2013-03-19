@@ -33,7 +33,7 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
   uint16_t ip_checksum = iphdr->ip_sum;
   iphdr->ip_sum = 0;
 
-  if (cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t)) != ip_checksum) {
+  if (cksum(packet + sizeof(sr_ethernet_hdr_t), sizeof(sr_ip_hdr_t)) != ip_checksum) {
     fprintf(stderr, "IP: invalid checksum\n");
     return -1;
   }
@@ -126,16 +126,22 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     /* Generate IP checksum */
     response_ip->ip_sum = 0;
     response_ip->ip_sum = cksum(response_packet + sizeof(sr_ethernet_hdr_t),
-                                response_length - sizeof(sr_ethernet_hdr_t));
+                                sizeof(sr_ip_hdr_t));
 
     /* Generate ethernet packet */
-    sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(response_packet);
-    uint8_t ether_swap[ETHER_ADDR_LEN];
-    memcpy(ether_swap, e_packet->ether_dhost, ETHER_ADDR_LEN);
-    memcpy(e_packet->ether_dhost, e_packet->ether_shost, ETHER_ADDR_LEN);
-    memcpy(e_packet->ether_shost, ether_swap, ETHER_ADDR_LEN);
+    sr_ethernet_hdr_t* request_eth = (sr_ethernet_hdr_t *)(packet);
+    sr_ethernet_hdr_t* response_eth = (sr_ethernet_hdr_t *)(response_packet);
 
-    sr_send_packet(sr, response_packet, response_length, iface);
+    /* Swap mac addresses */
+    uint8_t ether_swap[ETHER_ADDR_LEN];
+    memcpy(ether_swap, request_eth->ether_dhost, ETHER_ADDR_LEN);
+    memcpy(response_eth->ether_dhost, request_eth->ether_shost, ETHER_ADDR_LEN);
+    memcpy(response_eth->ether_shost, ether_swap, ETHER_ADDR_LEN);
+
+    if (sr_send_packet(sr, response_packet, response_length, iface) == -1) {
+      fprintf(stderr, "Error sending packet\n");
+    }
+    printf("*** -> Packet sent (%d)\n", response_length);
 
   } else {
     /* Forward */
