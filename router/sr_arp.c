@@ -88,19 +88,7 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
 }
 
 int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
-  /*
-  Pseudocode
-  if difftime(now, req->sent) > 1.0
-   if req->times_sent >= 5:
-       
-         
-       arpreq_destroy(req)
-   else:
-       send arp request
-       req->sent = now
-       req->times_sent++
-  */
-  printf("*** -> Handle ARP Request\n");
+  printf("*** -> (Timer) Processing ARP Request\n");
 
   time_t now = time(NULL);
   if (difftime(now, req->sent) > 1.0) {
