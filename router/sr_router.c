@@ -96,7 +96,7 @@ void sr_handlepacket(struct sr_instance* sr,
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
-    if (process_arp_packet(sr, packet, len, minlength, interface)  == -1) {
+    if (sr_process_arp_packet(sr, packet, len, minlength, interface)  == -1) {
       fprintf(stderr, "There was an error processing the ARP packet\n");
     }
   }

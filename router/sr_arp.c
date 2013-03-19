@@ -17,7 +17,7 @@
 #include "sr_router.h"
 
 /* TODO(mark): TEST THIS FUNCITON SOMEHOW */
-int process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, int minlength, char* iface) {
+int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, int minlength, char* iface) {
   minlength += sizeof(sr_arp_hdr_t);
   if (len < minlength) {
     fprintf(stderr, "ARP header: insufficient length\n");
@@ -29,6 +29,8 @@ int process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len
   /* Create ARP Header and find interface */
   sr_arp_hdr_t* arp_hdr = (sr_arp_hdr_t*)(packet);
   struct sr_if* interface = sr_find_interface(sr, arp_hdr->ar_tip);
+
+  /* TODO(mark): Check ARP queue to see if the request is in there. */
 
   if (interface) {
     sr_print_if(interface);
@@ -58,5 +60,9 @@ int process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len
     printf("ARP interface not found\n");
   }
 
+  return 0;
+}
+
+int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   return 0;
 }

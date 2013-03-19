@@ -5,12 +5,15 @@
  *
  *---------------------------------------------------------------------------*/
 
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "sr_ip.h"
 
+#include "sr_arp.h"
+#include "sr_arpcache.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
@@ -144,10 +147,24 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     printf("*** -> Packet sent (%d)\n", response_length);
 
   } else {
-    /* Forward */
-
+    /* Forward the Packet */
     /* Routing Table lookup */
     struct sr_rt* route = sr_find_rt_entry(sr, iphdr->ip_dst);
+    struct sr_arpcache* arp_cache = &sr->cache;
+    struct sr_arpentry* arp_entry = sr_arpcache_lookup(arp_cache, route->gw.s_addr);
+
+    if (arp_entry) {
+      /* Set fields in Ethernet pack for quick forwarding and send */
+      sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
+      memcpy(e_packet->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
+      sr_send_packet(sr, packet, len, iface);
+
+      /* Free ARP entry */
+      free(arp_entry);
+    } else {
+      struct sr_arpreq* req = sr_arpcache_queuereq(arp_cache, route->gw.s_addr, packet, len, iface);
+      sr_handle_arpreq(sr, req);
+    }
   }
 
   return 0;
