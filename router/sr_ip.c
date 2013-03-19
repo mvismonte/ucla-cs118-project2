@@ -141,29 +141,19 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     sr_send_packet(sr, response_packet, response_length, iface);
 
   } else {
-    /* Forward */
-
+    /* Forward the Packet */
     /* Routing Table lookup */
     struct sr_rt* route = sr_find_rt_entry(sr, iphdr->ip_dst);
     struct sr_arpcache* arp_cache = &sr->cache;
-    /*
-       entry = arpcache_lookup(next_hop_ip)
-
-     if entry:
-         use next_hop_ip->mac mapping in entry to send the packet
-         free entry
-     else:
-         req = arpcache_queuereq(next_hop_ip, packet, len)
-         handle_arpreq(req)*/
     struct sr_arpentry* arp_entry = sr_arpcache_lookup(arp_cache, route->gw.s_addr);
 
     if (arp_entry) {
-      /* Set fields in ethernet pack for quick forwarding and send */
+      /* Set fields in Ethernet pack for quick forwarding and send */
       sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
       memcpy(e_packet->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
       sr_send_packet(sr, packet, len, iface);
 
-      /* Free arp entry */
+      /* Free ARP entry */
       free(arp_entry);
     } else {
       struct sr_arpreq* req = sr_arpcache_queuereq(arp_cache, route->gw.s_addr, packet, len, iface);
