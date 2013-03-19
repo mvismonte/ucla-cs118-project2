@@ -166,7 +166,7 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
     if (req_ip->ip_ttl == 0) {
       printf("*** -> Packet TTL expired.\n");
       /* TODO(mark|tim|jon): Send back ICMP time exceeded */
-      sendExpiredICMP(sr, )
+      sendExpiredICMP(sr, req_ip, len, iface)
       return 0;
     }
 
