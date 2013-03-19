@@ -10,8 +10,12 @@
 
 #include <stdint.h>
 
+#include "sr_arpcache.h"
 #include "sr_rt.h"
 
-int process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface);
+/* Process an ARP packet */
+int sr_process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface);
+
+int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req);
 
 #endif
