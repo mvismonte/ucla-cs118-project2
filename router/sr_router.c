@@ -91,7 +91,7 @@ void sr_handlepacket(struct sr_instance* sr,
   uint16_t ethtype = ethertype(packet);
 
   if (ethtype == ethertype_ip) { /* IP */
-    if (process_ip_packet(sr, packet, len, minlength)  == -1) {
+    if (process_ip_packet(sr, packet, len, minlength, interface)  == -1) {
       fprintf(stderr, "There was an error processing the IP packet\n");
     }
   }

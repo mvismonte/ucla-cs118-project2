@@ -68,7 +68,7 @@ struct sr_rt* find_route(struct sr_instance* sr, uint32_t ip_dst) {
   return 0;
 }
 
-int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength) {
+int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface) {
   minlength += sizeof(sr_ip_hdr_t);
   if (len < minlength) {
     fprintf(stderr, "IP header: insufficient length\n");
@@ -113,8 +113,35 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
       }
 
       /* Process ICMP message */
+      printf("ICMP (type %d, code %d)\n", icmphdr->icmp_type, icmphdr->icmp_code);
 
+      if (icmphdr->icmp_type == 8 && icmphdr->icmp_code == 0) {
+        /* Echo Request */
+
+        /* Format echo reply */
+        icmphdr->icmp_type = 0;
+      }
+
+      /* Generate ICMP checksum */
+      icmphdr->icmp_sum = cksum(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t), len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
     }
+
+    /* Swap src and dst addresses */
+    iphdr->ip_dst = iphdr->ip_src;
+    iphdr->ip_src = own_interface->ip;
+
+    /* Generate IP checksum */
+    iphdr->ip_sum = cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+
+    /* Generate ethernet packet - quick and dirty */
+    sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
+    uint8_t ether_swap[ETHER_ADDR_LEN];
+    memcpy(ether_swap, e_packet->ether_dhost, ETHER_ADDR_LEN);
+    memcpy(e_packet->ether_dhost, e_packet->ether_shost, ETHER_ADDR_LEN);
+    memcpy(e_packet->ether_shost, ether_swap, ETHER_ADDR_LEN);
+
+    sr_send_packet(sr, packet, len, iface);
+
 
   } else {
     /* Forward */
