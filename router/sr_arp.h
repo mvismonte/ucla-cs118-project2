@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
-int process_arp_packet(uint8_t * packet, unsigned int len, int minlength);
+#include "sr_rt.h"
+
+int process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength);
 
 #endif

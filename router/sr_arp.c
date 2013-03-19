@@ -13,7 +13,7 @@
 #include "sr_protocol.h"
 #include "sr_utils.h"
 
-int process_arp_packet(uint8_t * packet, unsigned int len, int minlength) {
+int process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength) {
   minlength += sizeof(sr_arp_hdr_t);
   if (len < minlength) {
     fprintf(stderr, "ARP header: insufficient length\n");
