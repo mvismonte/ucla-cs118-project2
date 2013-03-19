@@ -6,42 +6,17 @@
  *---------------------------------------------------------------------------*/
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #include "sr_ip.h"
 
+#include "sr_if.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
 #include "sr_router.h"
 
 /* Helpers */
-struct sr_if* find_interface(struct sr_instance* sr, uint32_t ip_dst) {
-  struct sr_if* if_entry = 0;
-
-  assert(ip_dst);
-  assert(sr);
-
-  if (sr->if_list == 0) {
-    fprintf(stderr, "Interfaces empty\n");
-    return 0;
-  } else {
-    if_entry = sr->if_list;
-
-    fprintf(stderr, "*** -> Checking interfaces\n");
-    while (if_entry) {
-      sr_print_if(if_entry);  /* DEBUG */
-
-      if (ip_dst == if_entry->ip) {
-        /* Interface found */
-        return if_entry;
-      }
-
-      if_entry = if_entry->next;
-    }
-  }
-  return 0;
-}
-
 
 int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface) {
   minlength += sizeof(sr_ip_hdr_t);
@@ -64,7 +39,7 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
   }
 
   /* Check if in router's interfaces */
-  struct sr_if* own_interface = find_interface(sr, iphdr->ip_dst);
+  struct sr_if* own_interface = sr_find_interface(sr, iphdr->ip_dst);
 
   if (own_interface) {
     /* Interface exists */
