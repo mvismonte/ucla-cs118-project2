@@ -143,9 +143,9 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     response_ip->ip_hl = 5;
     response_ip->ip_tos = 0;
     response_ip->ip_len = htons(response_length - sizeof(sr_ethernet_hdr_t));
-    response_ip->ip_id = htons(req_ip->ip_id);
-    response_ip->ip_off = htons(0);
-    response_ip->ip_ttl = req_ip->ip_ttl;
+    response_ip->ip_id = htons(0);
+    response_ip->ip_off = htons(IP_DF);
+    response_ip->ip_ttl = 100;
     response_ip->ip_p = ip_protocol_icmp;
 
     /* Generate IP checksum */
