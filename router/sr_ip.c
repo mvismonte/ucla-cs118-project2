@@ -70,10 +70,28 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
 
         /* Format echo reply */
         icmphdr->icmp_type = 0;
+      } else {
+        /* Drop packet if other type */
+        return -1;
       }
 
       /* Generate ICMP checksum */
       icmphdr->icmp_sum = cksum(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t), len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
+
+    } else if (iphdr->ip_p == 6 || iphdr->ip_p == 17) {
+      /* TCP or UDP */
+
+      /* Create ICMP Type 3 Packet */
+      sr_icmp_t3_hdr_t* icmp_packet = (sr_icmp_t3_hdr_t *) malloc(sizeof(sr_icmp_t3_hdr_t));
+
+      /* Populate ICMP Message */
+      icmp_packet->icmp_type = 3;
+      icmp_packet->icmp_code = 3;
+      memcpy(icmp_packet->data, iphdr, ICMP_DATA_SIZE);  /* IP Header + 8 bytes */
+
+    } else {
+      /* Drop packet if other protocol */
+      return -1;
     }
 
     /* Swap src and dst addresses */
