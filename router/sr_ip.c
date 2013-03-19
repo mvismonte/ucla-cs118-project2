@@ -241,11 +241,11 @@ int sendExpiredICMP(struct sr_instance* sr, sr_ip_hdr_t* packet, unsigned int le
 {
 
    uint8_t* replyPacket = malloc(
-      sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
+      sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
 
    sr_ip_hdr_t* replyIpHeader = (sr_ip_hdr_t*) (replyPacket + sizeof(sr_ethernet_hdr_t));
 
-   sr_icmp_t3_hdr_t* replyIcmpHeader = (sr_icmp_t3_hdr_t*) ((uint8_t*) replyIpHeader
+   sr_icmp_hdr_t* replyIcmpHeader = (sr_icmp_hdr_t*) ((uint8_t*) replyIpHeader
       + sizeof(sr_ip_hdr_t));
 
    struct sr_if* interface = sr_get_interface(sr, iface);
@@ -256,7 +256,7 @@ int sendExpiredICMP(struct sr_instance* sr, sr_ip_hdr_t* packet, unsigned int le
    replyIpHeader->ip_v = 4;
    replyIpHeader->ip_hl = 4;
    replyIpHeader->ip_tos = 0;
-   replyIpHeader->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
+   replyIpHeader->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
    replyIpHeader->ip_id = htons(ipID);
    replyIpHeader->ip_off = htons(IP_DF);
    replyIpHeader->ip_ttl = 64;
@@ -273,7 +273,7 @@ int sendExpiredICMP(struct sr_instance* sr, sr_ip_hdr_t* packet, unsigned int le
    replyIcmpHeader->icmp_code = 0;
    replyIcmpHeader->icmp_sum = 0;
    memcpy(replyIcmpHeader->data, packet, 28);
-   replyIcmpHeader->icmp_sum = cksum(replyIcmpHeader, sizeof(sr_icmp_t3_hdr_t));
+   replyIcmpHeader->icmp_sum = cksum(replyIcmpHeader, sizeof(sr_icmp_hdr_t));
    
    /* send ICMP replyPacket*/
    
