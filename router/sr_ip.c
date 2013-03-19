@@ -191,7 +191,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     if (req_ip->ip_ttl == 0) {
       printf("*** -> Packet TTL expired.\n");
       /* TODO(mark|tim|jon): Send back ICMP time exceeded */
-      sendExpiredICMP(sr, req_ip, len, iface)
+      sendExpiredICMP(sr, req_ip, len, iface);
       return 0;
     }
 
@@ -264,11 +264,12 @@ int sendExpiredICMP(struct sr_instance* sr, sr_ip_hdr_t* packet, unsigned int le
    replyIpHeader->ip_sum = 0;
    replyIpHeader->ip_src = interface->ip;
    replyIpHeader->ip_dst = packet->ip_src; 
-   replyIpHeader->ip_sum = cksum(replyIpHeader, getIpHeaderLength(replyIpHeader));
+   /* where is getIpHeaderLength ? */
+   /*replyIpHeader->ip_sum = cksum(replyIpHeader, getIpHeaderLength(replyIpHeader)); */
    /* increment ID number*/
-   ipID++
+   ipID++;
    
-   /* Fill in ICMP fields. */
+   /* Fill in ICMP fields.
    replyIcmpHeader->icmp_type = 11;
    replyIcmpHeader->icmp_code = 0;
    replyIcmpHeader->icmp_sum = 0;
