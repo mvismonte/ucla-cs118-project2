@@ -44,6 +44,10 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
   if (own_interface) {
     /* Interface exists */
 
+    /* Initialize response */
+    unsigned int response_length = 0;
+    uint8_t* response_packet = 0;
+
     if (iphdr->ip_p == ip_protocol_icmp) { /* ICMP */
       minlength += sizeof(sr_icmp_hdr_t);
       if (len < minlength) {
@@ -65,51 +69,73 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
       /* Process ICMP message */
       printf("ICMP (type %d, code %d)\n", icmphdr->icmp_type, icmphdr->icmp_code);
 
-      if (icmphdr->icmp_type == 8 && icmphdr->icmp_code == 0) {
-        /* Echo Request */
-
-        /* Format echo reply */
-        icmphdr->icmp_type = 0;
-      } else {
-        /* Drop packet if other type */
+      if (icmphdr->icmp_type != 8 || icmphdr->icmp_code != 0) {
+        /* Drop packet if not echo request */
         return -1;
       }
 
+      response_length = len;
+
+      /* Use request packet as response: saves alloc - tim */
+      response_packet = packet;
+
+      /* Format echo reply */
+      icmphdr->icmp_type = 0;
+
       /* Generate ICMP checksum */
-      icmphdr->icmp_sum = cksum(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t), len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
+      icmphdr->icmp_sum = cksum(
+          response_packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t),
+          len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
 
     } else if (iphdr->ip_p == 6 || iphdr->ip_p == 17) {
       /* TCP or UDP */
 
-      /* Create ICMP Type 3 Packet */
-      sr_icmp_t3_hdr_t* icmp_packet = (sr_icmp_t3_hdr_t *) malloc(sizeof(sr_icmp_t3_hdr_t));
+      response_length = sizeof(sr_ethernet_hdr_t) +
+                                     sizeof(sr_ip_hdr_t) +
+                                     sizeof(sr_icmp_t3_hdr_t);
+
+      /* Create ethernet packet with ICMP Type 3 */
+      response_packet = (uint8_t *)malloc(response_length);
 
       /* Populate ICMP Message */
-      icmp_packet->icmp_type = 3;
-      icmp_packet->icmp_code = 3;
-      memcpy(icmp_packet->data, iphdr, ICMP_DATA_SIZE);  /* IP Header + 8 bytes */
+      sr_icmp_t3_hdr_t* response_icmp = (sr_icmp_t3_hdr_t *)(response_packet +
+                                                             sizeof(sr_ethernet_hdr_t) +
+                                                             sizeof(sr_ip_hdr_t));
+      response_icmp->icmp_type = 3;
+      response_icmp->icmp_code = 3;
+      memcpy(response_icmp->data, iphdr, ICMP_DATA_SIZE);  /* IP Header + 8 bytes */
+
+      /* Generate ICMP checksum */
+      response_icmp->icmp_sum = cksum(
+          response_packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t),
+          sizeof(sr_icmp_t3_hdr_t));
 
     } else {
       /* Drop packet if other protocol */
       return -1;
     }
 
+    /* Populate respone IP Packet */
+    sr_ip_hdr_t* response_ip = (sr_ip_hdr_t *)(response_packet +
+                                               sizeof(sr_ethernet_hdr_t));
+
     /* Swap src and dst addresses */
-    iphdr->ip_dst = iphdr->ip_src;
-    iphdr->ip_src = own_interface->ip;
+    response_ip->ip_dst = iphdr->ip_src;
+    response_ip->ip_src = own_interface->ip;
 
     /* Generate IP checksum */
-    iphdr->ip_sum = cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+    response_ip->ip_sum = 0;
+    response_ip->ip_sum = cksum(response_packet + sizeof(sr_ethernet_hdr_t),
+                                response_length - sizeof(sr_ethernet_hdr_t));
 
-    /* Generate ethernet packet - quick and dirty */
-    sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
+    /* Generate ethernet packet */
+    sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(response_packet);
     uint8_t ether_swap[ETHER_ADDR_LEN];
     memcpy(ether_swap, e_packet->ether_dhost, ETHER_ADDR_LEN);
     memcpy(e_packet->ether_dhost, e_packet->ether_shost, ETHER_ADDR_LEN);
     memcpy(e_packet->ether_shost, ether_swap, ETHER_ADDR_LEN);
 
-    sr_send_packet(sr, packet, len, iface);
-
+    sr_send_packet(sr, response_packet, response_length, iface);
 
   } else {
     /* Forward */
