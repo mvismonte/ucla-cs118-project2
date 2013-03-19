@@ -160,8 +160,8 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
      */
 
     /* Decrement the TTL */
-    iphdr->ip_ttl--;
-    if (iphdr->ip_ttl == 0) {
+    req_ip->ip_ttl--;
+    if (req_ip->ip_ttl == 0) {
       printf("*** -> Packet TTL expired.\n");
       /* TODO(mark|tim|jon): Send back ICMP time exceeded */
       return 0;
