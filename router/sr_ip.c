@@ -19,6 +19,8 @@
 #include "sr_utils.h"
 #include "sr_router.h"
 
+/* jon needs dis for unique IDs for ip headers */
+static uint16_t ipID = 0;
 
 int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int len, char* iface) {
 
@@ -164,6 +166,7 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
     if (req_ip->ip_ttl == 0) {
       printf("*** -> Packet TTL expired.\n");
       /* TODO(mark|tim|jon): Send back ICMP time exceeded */
+      sendExpiredICMP(sr, )
       return 0;
     }
 
@@ -209,3 +212,46 @@ int sr_forward_eth_packet(struct sr_instance* sr, uint8_t* packet, unsigned int 
   return 0;
 }
 
+int sendExpiredICMP(struct sr_instance* sr, sr_ip_hdr_t* packet, unsigned int len, char* iface)
+{
+
+   uint8_t* replyPacket = malloc(
+      sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
+
+   sr_ip_hdr_t* replyIpHeader = (sr_ip_hdr_t*) (replyPacket + sizeof(sr_ethernet_hdr_t));
+
+   sr_icmp_t3_hdr_t* replyIcmpHeader = (sr_icmp_t3_hdr_t*) ((uint8_t*) replyIpHeader
+      + sizeof(sr_ip_hdr_t));
+
+   struct sr_if* interface = sr_get_interface(sr, iface);
+
+   printf("*** -> Sending ICMP reply: time exceeded.\n");
+   
+   /* Fill in IP header */
+   replyIpHeader->ip_v = 4;
+   replyIpHeader->ip_hl = 4;
+   replyIpHeader->ip_tos = 0;
+   replyIpHeader->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
+   replyIpHeader->ip_id = htons(ipID);
+   replyIpHeader->ip_off = htons(IP_DF);
+   replyIpHeader->ip_ttl = 64;
+   replyIpHeader->ip_p = ip_protocol_icmp;
+   replyIpHeader->ip_sum = 0;
+   replyIpHeader->ip_src = interface->ip;
+   replyIpHeader->ip_dst = packet->ip_src; 
+   replyIpHeader->ip_sum = cksum(replyIpHeader, getIpHeaderLength(replyIpHeader));
+   /* increment ID number*/
+   ipID++
+   
+   /* Fill in ICMP fields. */
+   replyIcmpHeader->icmp_type = 11;
+   replyIcmpHeader->icmp_code = 0;
+   replyIcmpHeader->icmp_sum = 0;
+   memcpy(replyIcmpHeader->data, packet, 28);
+   replyIcmpHeader->icmp_sum = cksum(replyIcmpHeader, sizeof(sr_icmp_t3_hdr_t));
+   
+   /* send ICMP replyPacket*/
+   
+   free(replyPacket);
+   return 0;
+}
