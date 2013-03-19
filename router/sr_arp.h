@@ -12,6 +12,6 @@
 
 #include "sr_rt.h"
 
-int process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength);
+int process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface);
 
 #endif
