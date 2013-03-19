@@ -15,6 +15,34 @@
 #include "sr_router.h"
 
 /* Helpers */
+struct sr_if* find_interface(struct sr_instance* sr, uint32_t ip_dst) {
+  struct sr_if* if_entry = 0;
+
+  assert(ip_dst);
+  assert(sr);
+
+  if (sr->if_list == 0) {
+    fprintf(stderr, "Interfaces empty\n");
+    return 0;
+  } else {
+    if_entry = sr->if_list;
+
+    fprintf(stderr, "*** -> Checking interfaces\n");
+    while (if_entry) {
+      sr_print_if(if_entry);  /* DEBUG */
+
+      if (ip_dst == if_entry->ip) {
+        /* Interface found */
+        return if_entry;
+      }
+
+      if_entry = if_entry->next;
+    }
+  }
+  return 0;
+}
+
+
 struct sr_rt* find_route(struct sr_instance* sr, uint32_t ip_dst) {
   struct sr_rt* rt_entry = 0;
 
@@ -24,6 +52,7 @@ struct sr_rt* find_route(struct sr_instance* sr, uint32_t ip_dst) {
   } else {
     rt_entry = sr->routing_table;
 
+    fprintf(stderr, "*** -> Checking routing table\n");
     while (rt_entry) {
       sr_print_routing_entry(rt_entry);  /* DEBUG */
 
@@ -60,10 +89,10 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
   }
 
   /* TODO */
-  int self = 0;
+  struct sr_if* own_interface = find_interface(sr, iphdr->ip_dst);
 
-  if (self) {
-    /* Route exists */
+  if (own_interface) {
+    /* Interface exists */
 
     if (iphdr->ip_p == ip_protocol_icmp) {/* ICMP */
       minlength += sizeof(sr_icmp_hdr_t);
