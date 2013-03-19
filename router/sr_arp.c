@@ -20,9 +20,9 @@
 #include "sr_router.h"
 
 /* TODO(mark): TEST THIS FUNCITON SOMEHOW */
-int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, int minlength, char* iface) {
-  minlength += sizeof(sr_arp_hdr_t);
-  if (len < minlength) {
+int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, char* iface) {
+
+  if (len < sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t)) {
     fprintf(stderr, "ARP header: insufficient length\n");
     return -1;
   }

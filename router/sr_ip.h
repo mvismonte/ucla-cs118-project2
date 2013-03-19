@@ -12,7 +12,7 @@
 
 #include "sr_rt.h"
 
-int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, int minlength, char* iface);
+int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface);
 
 int sr_forward_eth_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
 

@@ -82,8 +82,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
   print_hdr_eth(packet);  /* DEBUG */
 
-  int minlength = sizeof(sr_ethernet_hdr_t);
-  if (len < minlength) {
+  if (len < sizeof(sr_ethernet_hdr_t)) {
     fprintf(stderr, "ETHERNET header: insufficient length\n");
     return;
   }
@@ -91,12 +90,12 @@ void sr_handlepacket(struct sr_instance* sr,
   uint16_t ethtype = ethertype(packet);
 
   if (ethtype == ethertype_ip) { /* IP */
-    if (sr_process_ip_packet(sr, packet, len, minlength, interface)  == -1) {
+    if (sr_process_ip_packet(sr, packet, len, interface)  == -1) {
       fprintf(stderr, "There was an error processing the IP packet\n");
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
-    if (sr_process_arp_packet(sr, packet, len, minlength, interface)  == -1) {
+    if (sr_process_arp_packet(sr, packet, len, interface)  == -1) {
       fprintf(stderr, "There was an error processing the ARP packet\n");
     }
   }
