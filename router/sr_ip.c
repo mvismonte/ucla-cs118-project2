@@ -6,6 +6,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #include "sr_ip.h"
@@ -147,7 +148,7 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     /* Forward */
 
     /* Routing Table lookup */
-    struct sr_rt* route = find_route(sr, iphdr->ip_dst);
+    /* struct sr_rt* route = find_route(sr, iphdr->ip_dst); */
   }
 
   return 0;
