@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "sr_arp.h"
 
@@ -77,7 +78,7 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
 int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   /*
   Pseudocode
- if difftime(now, req->sent) > 1.0
+  if difftime(now, req->sent) > 1.0
    if req->times_sent >= 5:
        send icmp host unreachable to source addr of all pkts waiting
          on this request
@@ -87,5 +88,7 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
        req->sent = now
        req->times_sent++
   */
+  time_t now = time(NULL);
+
   return 0;
 }
