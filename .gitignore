@@ -2,3 +2,6 @@
 router/*.d
 router/*.o
 router/sr*
+
+*.swp
+pox*
