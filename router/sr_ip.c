@@ -94,23 +94,26 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
   if (own_interface) {
     /* Interface exists */
 
-    if (iphdr->ip_p == ip_protocol_icmp) {/* ICMP */
+    if (iphdr->ip_p == ip_protocol_icmp) { /* ICMP */
       minlength += sizeof(sr_icmp_hdr_t);
       if (len < minlength) {
         fprintf(stderr, "ICMP header: insufficient length\n");
         return -1;
       }
-    }
 
-    /* Create ICMP Packet */
-    sr_icmp_hdr_t * icmphdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      /* Create ICMP Packet */
+      sr_icmp_hdr_t * icmphdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
-    uint16_t icmp_checksum = icmphdr->icmp_sum;
-    icmphdr->icmp_sum = 0;
+      uint16_t icmp_checksum = icmphdr->icmp_sum;
+      icmphdr->icmp_sum = 0;
 
-    if (cksum(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t), len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t)) != icmp_checksum) {
-      fprintf(stderr, "ICMP: invalid checksum\n");
-      return -1;
+      if (cksum(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t), len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t)) != icmp_checksum) {
+        fprintf(stderr, "ICMP: invalid checksum\n");
+        return -1;
+      }
+
+      /* Process ICMP message */
+
     }
 
   } else {
