@@ -88,7 +88,7 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     return -1;
   }
 
-  /* TODO */
+  /* Check if in router's interfaces */
   struct sr_if* own_interface = find_interface(sr, iphdr->ip_dst);
 
   if (own_interface) {
@@ -100,6 +100,17 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
         fprintf(stderr, "ICMP header: insufficient length\n");
         return -1;
       }
+    }
+
+    /* Create ICMP Packet */
+    sr_icmp_hdr_t * icmphdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+
+    uint16_t icmp_checksum = icmphdr->icmp_sum;
+    icmphdr->icmp_sum = 0;
+
+    if (cksum(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t), len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t)) != icmp_checksum) {
+      fprintf(stderr, "ICMP: invalid checksum\n");
+      return -1;
     }
 
   } else {
