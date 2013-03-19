@@ -14,10 +14,9 @@
 #include "sr_arp.h"
 
 #include "sr_if.h"
- #include "sr_ip.h"
+#include "sr_ip.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
-#include "sr_router.h"
 
 /* TODO(mark): TEST THIS FUNCITON SOMEHOW */
 int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, char* iface) {
@@ -70,7 +69,7 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
 
         /* Send the packet back on it's way. */
         arp_hdr->ar_op = htons(arp_op_reply);
-        /* print_hdr_arp(packet + sizeof(sr_ethernet_hdr_t)); */
+        printf("*** -> Sending out ARP Reply\n");
         sr_send_packet(sr, packet, len, iface);
       } else {
         fprintf(stderr, "ARP Op Code Unknown: (%d)\n", arp_hdr->ar_op);
@@ -88,7 +87,7 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
 }
 
 int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
-  printf("*** -> (Timer) Processing ARP Request\n");
+  printf("*** -> (Timer) Processing ARP Request from Queue\n");
 
   time_t now = time(NULL);
   if (difftime(now, req->sent) > 1.0) {

@@ -17,7 +17,7 @@
 #include "sr_if.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
-#include "sr_router.h"
+#include "sr_rt.h"
 
 /* jon needs dis for unique IDs for ip headers */
 static uint16_t ipID = 0;
