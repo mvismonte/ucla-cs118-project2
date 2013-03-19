@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#include "sr_rt.h"
+#include "sr_router.h"
 
 int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface);
 
