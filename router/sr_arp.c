@@ -77,15 +77,54 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   Pseudocode
   if difftime(now, req->sent) > 1.0
    if req->times_sent >= 5:
-       send icmp host unreachable to source addr of all pkts waiting
-         on this request
+       
+         
        arpreq_destroy(req)
    else:
        send arp request
        req->sent = now
        req->times_sent++
   */
+  printf("*** -> Handle ARP Request\n");
   time_t now = time(NULL);
+  if (difftime(now, req->sent) > 1.0) {
+    if (req->times_sent >= 5) {
+      /* Send icmp host unreachable to source addr of all pkts waiting on this request */
+      /* TODO(Jon|Tim): Complete this? */
 
+      /* Destroy ARP req */
+      sr_arpreq_destroy(&(sr->cache), req);
+    } else {
+      /* Send an ARP request */
+      sr_arp_hdr_t arp_frame;
+
+      /* Set source data */
+      /* Just using the first interface in the list.  Is this okay? =\ */
+      struct sr_if* iface = sr->if_list;
+      arp_frame.ar_sip = iface->ip;
+      memcpy(arp_frame.ar_sha, iface->addr, ETHER_ADDR_LEN);
+
+      /* Set target data */
+      /* Just using the first interface in the list.  Is this okay? =\ */
+      arp_frame.ar_tip = req->ip;
+      int i;
+      for (i = 0; i < ETHER_ADDR_LEN; i++) {
+        arp_frame.ar_tha[i] = 0xFF;
+      }
+
+      /* Send the request */
+      printf("Sending... \n");
+      print_hdr_arp((uint8_t *) (&arp_frame));
+      sr_print_if(iface);
+      /* TODO(mark): I'm stuck right here.
+      Need to look into sr_arp_opcode, and 
+      */
+      sr_send_packet(sr, (uint8_t *) (&arp_frame), sizeof(sr_arp_hdr_t), iface->name);
+
+      /* Increment req information */
+      req->sent = now;
+      req->times_sent++;
+    }
+  }
   return 0;
 }

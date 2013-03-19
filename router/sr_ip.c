@@ -148,18 +148,22 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int 
 
   } else {
     /* Forward the Packet */
+    printf("*** -> Forwarding packet\n");
+
     /* Routing Table lookup */
     struct sr_rt* route = sr_find_rt_entry(sr, iphdr->ip_dst);
     struct sr_arpcache* arp_cache = &sr->cache;
     struct sr_arpentry* arp_entry = sr_arpcache_lookup(arp_cache, route->gw.s_addr);
 
     if (arp_entry) {
+      printf("*** -> ARP Cache Hit\n");
       /* Forward the packet */
       sr_forward_eth_packet(sr, packet, len, arp_entry->mac, iface);
 
       /* Free ARP entry */
       free(arp_entry);
     } else {
+      printf("*** -> ARP Cache Miss\n");
       struct sr_arpreq* req = sr_arpcache_queuereq(arp_cache, route->gw.s_addr, packet, len, iface);
       sr_handle_arpreq(sr, req);
     }
