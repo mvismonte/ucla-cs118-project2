@@ -20,7 +20,7 @@
 #include "sr_rt.h"
 
 
-int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int len, char* iface) {
+int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface) {
 
   /* Start of next header: add to packet head */
   unsigned int next_hdr = sizeof(sr_ethernet_hdr_t);
@@ -49,10 +49,11 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
 
   if (own_interface) {
     /* Interface exists */
+
     next_hdr += sizeof(sr_ip_hdr_t);
 
     /* Initialize response */
-    unsigned int response_length = 0;
+    uint16_t response_length = 0;
     uint8_t* response_packet = 0;
 
     if (req_ip->ip_p == ip_protocol_icmp) { /* ICMP */
@@ -62,7 +63,7 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
       }
 
       /* Create ICMP Packet */
-      sr_icmp_hdr_t * req_icmp = (sr_icmp_hdr_t *)(packet + next_hdr);
+      sr_icmp_hdr_t* req_icmp = (sr_icmp_hdr_t *)(packet + next_hdr);
 
       uint16_t req_icmp_cksum = req_icmp->icmp_sum;
       req_icmp->icmp_sum = 0;
@@ -83,15 +84,24 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
       /* Set response length equal to request's */
       response_length = len;
 
-      /* Use request packet as response: saves alloc - tim */
-      response_packet = packet;
+      /* Create ethernet packet with ICMP */
+      response_packet = (uint8_t *)malloc(response_length);
+
+      /* Copy over packet with ICMP + body */
+      memcpy(response_packet + next_hdr, packet + next_hdr, response_length - next_hdr);
+
+      /* Populate ICMP Message */
+      sr_icmp_hdr_t* response_icmp = (sr_icmp_hdr_t *)(response_packet +
+                                                       next_hdr);
 
       /* Format echo reply */
-      req_icmp->icmp_type = 0;
+      response_icmp->icmp_type = 0;
+      response_icmp->icmp_code = 0;
 
       /* Generate ICMP checksum */
-      req_icmp->icmp_sum = cksum(response_packet + next_hdr,
-                                 len - next_hdr);
+      response_icmp->icmp_sum = 0;  /* Clear just in case */
+      response_icmp->icmp_sum = cksum(response_packet + next_hdr,
+                                      response_length - next_hdr);
 
     } else if (req_ip->ip_p == 6 || req_ip->ip_p == 17) {
       /* TCP or UDP */
@@ -111,6 +121,7 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
       memcpy(response_icmp->data, req_ip, ICMP_DATA_SIZE);
 
       /* Generate ICMP checksum */
+      response_icmp->icmp_sum = 0;  /* Clear just in case */
       response_icmp->icmp_sum = cksum(response_packet + next_hdr,
                                       sizeof(sr_icmp_t3_hdr_t));
 
@@ -125,22 +136,36 @@ int sr_process_ip_packet(struct sr_instance* sr,uint8_t* packet, unsigned int le
 
     /* Swap src and dst addresses */
     response_ip->ip_dst = req_ip->ip_src;
-    response_ip->ip_src = own_interface->ip;
+    response_ip->ip_src = req_ip->ip_dst;
+
+    /* Set IP Headers */
+    response_ip->ip_v = 4;
+    response_ip->ip_hl = 5;
+    response_ip->ip_tos = 0;
+    response_ip->ip_len = htons(response_length - sizeof(sr_ethernet_hdr_t));
+    response_ip->ip_id = htons(req_ip->ip_id);
+    response_ip->ip_off = htons(0);
+    response_ip->ip_ttl = req_ip->ip_ttl;
+    response_ip->ip_p = ip_protocol_icmp;
 
     /* Generate IP checksum */
     response_ip->ip_sum = 0;
     response_ip->ip_sum = cksum(response_packet + sizeof(sr_ethernet_hdr_t),
                                 sizeof(sr_ip_hdr_t));
 
+    print_hdr_ip(response_packet + sizeof(sr_ethernet_hdr_t));
     /* Generate ethernet packet */
     sr_ethernet_hdr_t* request_eth = (sr_ethernet_hdr_t *)(packet);
     sr_ethernet_hdr_t* response_eth = (sr_ethernet_hdr_t *)(response_packet);
 
+    response_eth->ether_type = htons(ethertype_ip);
+
     /* Swap mac addresses */
-    uint8_t ether_swap[ETHER_ADDR_LEN];
-    memcpy(ether_swap, request_eth->ether_dhost, ETHER_ADDR_LEN);
     memcpy(response_eth->ether_dhost, request_eth->ether_shost, ETHER_ADDR_LEN);
-    memcpy(response_eth->ether_shost, ether_swap, ETHER_ADDR_LEN);
+    memcpy(response_eth->ether_shost, request_eth->ether_dhost, ETHER_ADDR_LEN);
+
+    printf("***-> Sending packet\n");
+    print_hdrs(response_packet, response_length);  /* DEBUG */
 
     if (sr_send_packet(sr, response_packet, response_length, iface) == -1) {
       fprintf(stderr, "Error sending packet\n");
