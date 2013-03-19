@@ -21,7 +21,7 @@
 
 /* Helpers */
 
-int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface) {
+int sr_process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, int minlength, char* iface) {
   minlength += sizeof(sr_ip_hdr_t);
   if (len < minlength) {
     fprintf(stderr, "IP header: insufficient length\n");
@@ -154,10 +154,8 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     struct sr_arpentry* arp_entry = sr_arpcache_lookup(arp_cache, route->gw.s_addr);
 
     if (arp_entry) {
-      /* Set fields in Ethernet pack for quick forwarding and send */
-      sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
-      memcpy(e_packet->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
-      sr_send_packet(sr, packet, len, iface);
+      /* Forward the packet */
+      sr_forward_eth_packet(sr, packet, len, arp_entry->mac, iface);
 
       /* Free ARP entry */
       free(arp_entry);
@@ -167,6 +165,14 @@ int process_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len
     }
   }
 
+  return 0;
+}
+
+int sr_forward_eth_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface) {
+  /* Set fields in Ethernet pack for quick forwarding and send */
+  sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
+  memcpy(e_packet->ether_dhost, mac, ETHER_ADDR_LEN);
+  sr_send_packet(sr, packet, len, iface);
   return 0;
 }
 

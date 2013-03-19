@@ -13,6 +13,7 @@
 #include "sr_arp.h"
 
 #include "sr_if.h"
+ #include "sr_ip.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
 #include "sr_router.h"
@@ -31,39 +32,35 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
   sr_arp_hdr_t* arp_hdr = (sr_arp_hdr_t*)(packet);
   struct sr_if* interface = sr_find_interface(sr, arp_hdr->ar_tip);
 
-  /* TODO(mark): Check ARP queue to see if the request is in there.
-   The ARP reply processing code should move entries from the ARP request
-   queue to the ARP cache:
-
-   # When servicing an arp reply that gives us an IP->MAC mapping
-   req = arpcache_insert(ip, mac)
-
-   if req:
-       send all packets on the req->packets linked list
-       arpreq_destroy(req)
-  */
-
-
   if (interface) {
     sr_print_if(interface);
 
     if (strcmp(interface->name, iface) == 0) {
-      /* Set the target to the incoming ARP source. */
-      memcpy(arp_hdr->ar_tha, arp_hdr->ar_sha, ETHER_ADDR_LEN);
-      arp_hdr->ar_tip = arp_hdr->ar_sip;
+      struct sr_arpreq* req = sr_arpcache_insert(&(sr->cache), arp_hdr->ar_tha, arp_hdr->ar_tip);
 
-      /* Set the source to this interface. */
-      memcpy(arp_hdr->ar_sha, interface->addr, ETHER_ADDR_LEN);
-      arp_hdr->ar_sip = interface->ip;
+      if (req) { /* Process ARP Reply */
+        struct sr_packet* pckt = req->packets;
+        for (; pckt != NULL; pckt = pckt->next) {
+          sr_forward_eth_packet(sr, pckt->buf, pckt->len, arp_hdr->ar_sha, iface);
+        }
+      } else { /* Process ARP Request */
+        /* Set the target to the incoming ARP source. */
+        memcpy(arp_hdr->ar_tha, arp_hdr->ar_sha, ETHER_ADDR_LEN);
+        arp_hdr->ar_tip = arp_hdr->ar_sip;
 
-      /* Set ethernet frame MAC information */
-      sr_ethernet_hdr_t* ethernet_hdr = (sr_ethernet_hdr_t*)(packet);
-      memcpy(ethernet_hdr->ether_dhost, arp_hdr->ar_tha, ETHER_ADDR_LEN);
-      memcpy(ethernet_hdr->ether_shost, arp_hdr->ar_sha, ETHER_ADDR_LEN);
+        /* Set the source to this interface. */
+        memcpy(arp_hdr->ar_sha, interface->addr, ETHER_ADDR_LEN);
+        arp_hdr->ar_sip = interface->ip;
 
-      /* Send the packet back on it's way. */
-      print_hdr_arp(packet);
-      sr_send_packet(sr, packet, len, iface);
+        /* Set ethernet frame MAC information */
+        sr_ethernet_hdr_t* ethernet_hdr = (sr_ethernet_hdr_t*)(packet);
+        memcpy(ethernet_hdr->ether_dhost, arp_hdr->ar_tha, ETHER_ADDR_LEN);
+        memcpy(ethernet_hdr->ether_shost, arp_hdr->ar_sha, ETHER_ADDR_LEN);
+
+        /* Send the packet back on it's way. */
+        print_hdr_arp(packet);
+        sr_send_packet(sr, packet, len, iface);
+      }
     } else {
       fprintf(stderr, "ARP interface names didn't match: %s, %s\n", interface->name, iface);
       return -1;
