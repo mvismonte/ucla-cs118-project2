@@ -176,3 +176,36 @@ void sr_print_routing_entry(struct sr_rt* entry)
     printf("%s\n",entry->interface);
 
 } /* -- sr_print_routing_entry -- */
+
+
+/*---------------------------------------------------------------------
+ * Method: sr_find_rt_entry
+ *
+ * Finds routing table entry by ip
+ *---------------------------------------------------------------------*/
+
+struct sr_rt* sr_find_rt_entry(struct sr_instance* sr, uint32_t ip_dst) {
+  struct sr_rt* rt_entry = 0;
+
+  if (sr->routing_table == 0) {
+    fprintf(stderr, "Routing table empty\n");
+    return 0;
+  } else {
+    rt_entry = sr->routing_table;
+
+    fprintf(stderr, "*** -> Checking routing table\n");
+    while (rt_entry) {
+      sr_print_routing_entry(rt_entry);  /* DEBUG */
+
+      /* Check masked destination to routing table entry */
+      if ((ip_dst & (rt_entry->mask).s_addr) == (rt_entry->dest).s_addr) {
+        /* Route found */
+        return rt_entry;
+      }
+
+      rt_entry = rt_entry->next;
+    }
+  }
+  return 0;
+} /* -- find_route -- */
+
