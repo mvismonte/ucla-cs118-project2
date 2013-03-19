@@ -24,31 +24,6 @@
 #include "sr_rt.h"
 #include "sr_utils.h"
 
-/* Helpers */
-struct sr_rt* find_route(struct sr_instance* sr, uint32_t ip_dst) {
-  struct sr_rt* rt_entry = 0;
-
-  if (sr->routing_table == 0) {
-    fprintf(stderr, "Routing table empty\n");
-    return 0;
-  } else {
-    rt_entry = sr->routing_table;
-
-    while (rt_entry) {
-      sr_print_routing_entry(rt_entry);  /* DEBUG */
-
-      /* Check masked destination to routing table entry */
-      if ((ip_dst & (rt_entry->mask).s_addr) == (rt_entry->dest).s_addr) {
-        /* Route found */
-        return rt_entry;
-      }
-
-      rt_entry = rt_entry->next;
-    }
-  }
-  return 0;
-}
-
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -116,7 +91,7 @@ void sr_handlepacket(struct sr_instance* sr,
   uint16_t ethtype = ethertype(packet);
 
   if (ethtype == ethertype_ip) { /* IP */
-    if (process_ip_packet(packet, len, minlength)  == -1) {
+    if (process_ip_packet(sr, packet, len, minlength)  == -1) {
       fprintf(stderr, "There was an error processing the IP packet\n");
     }
   }
