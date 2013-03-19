@@ -14,12 +14,14 @@
 #include <stdio.h>
 #include <assert.h>
 
-
-#include "sr_if.h"
-#include "sr_rt.h"
 #include "sr_router.h"
-#include "sr_protocol.h"
+
+#include "sr_arp.h"
 #include "sr_arpcache.h"
+#include "sr_if.h"
+#include "sr_ip.h"
+#include "sr_protocol.h"
+#include "sr_rt.h"
 #include "sr_utils.h"
 
 /* Helpers */
@@ -114,53 +116,14 @@ void sr_handlepacket(struct sr_instance* sr,
   uint16_t ethtype = ethertype(packet);
 
   if (ethtype == ethertype_ip) { /* IP */
-    minlength += sizeof(sr_ip_hdr_t);
-    if (len < minlength) {
-      fprintf(stderr, "IP header: insufficient length\n");
-      return;
-    }
-
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-
-    /* Create IP Packet */
-    sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-
-    uint16_t ip_checksum = iphdr->ip_sum;
-    iphdr->ip_sum = 0;
-
-    if (cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t)) != ip_checksum) {
-      fprintf(stderr, "IP: invalid checksum\n");
-      return;
-    }
-
-    /* TODO */
-    int self = 0;
-
-    if (self) {
-      /* Route exists */
-
-      if (iphdr->ip_p == ip_protocol_icmp) {/* ICMP */
-        minlength += sizeof(sr_icmp_hdr_t);
-        if (len < minlength) {
-          fprintf(stderr, "ICMP header: insufficient length\n");
-          return;
-        }
-      }
-
-    } else {
-      /* Forward */
-
-      /* Routing Table lookup */
-      struct sr_rt* route = find_route(sr, iphdr->ip_dst);
+    if (process_ip_packet(packet, len, minlength)  == -1) {
+      fprintf(stderr, "There was an error processing the IP packet\n");
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
-    minlength += sizeof(sr_arp_hdr_t);
-    if (len < minlength) {
-      fprintf(stderr, "ARP header: insufficient length\n");
-      return;
+    if (process_arp_packet(packet, len, minlength)  == -1) {
+      fprintf(stderr, "There was an error processing the ARP packet\n");
     }
-    printf("*** -> ARP Request\n");
   }
   else {
     fprintf(stderr, "Unrecognized Ethernet Type: %d\n", ethtype);
