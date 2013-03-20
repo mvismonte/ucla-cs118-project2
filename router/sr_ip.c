@@ -185,6 +185,10 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     /* TODO(mark|tim|jon): Error checking
       If the route does not exist, send ICMP host unreachable
      */
+    if (route == NULL) {
+      printf("*** -> Route does not exist.  Forwarding terminated\n");
+      return -2;
+    }
 
     /* Decrement the TTL */
     req_ip->ip_ttl--;
