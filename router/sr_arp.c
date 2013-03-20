@@ -15,6 +15,7 @@
 
 #include "sr_if.h"
 #include "sr_ip.h"
+#include "sr_icmp.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
 
@@ -90,10 +91,28 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   printf("*** -> (Timer) Processing ARP Request from Queue\n");
 
   time_t now = time(NULL);
-  if (difftime(now, req->sent) > 1.0) {
+  if (difftime(now, req->sent) >= 1.0) {
     if (req->times_sent >= 5) {
       /* Send icmp host unreachable to source addr of all pkts waiting on this request */
       /* TODO(Jon|Tim): Complete this? */
+
+      struct sr_packet *pkt = req->packets;
+
+      while (pkt) {
+        /* Generate ethernet packet: used to get mac destination */
+        sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(pkt->buf);
+
+        /* Create IP Packet */
+        sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(pkt->buf + sizeof(sr_ethernet_hdr_t));
+
+        if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, req_eth->ether_shost,
+                                (uint8_t *)req_ip, pkt->iface) == -1) {
+          fprintf(stderr, "Failure sending ICMP message\n");
+        }
+
+        pkt = pkt->next;
+      }
+
 
       /* Destroy ARP req */
       sr_arpreq_destroy(&(sr->cache), req);
