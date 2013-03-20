@@ -19,8 +19,10 @@
 #include "sr_utils.h"
 #include "sr_rt.h"
 
+#include "sr_icmp.h"
+
 /* jon needs dis for unique IDs for ip headers */
-static uint16_t ipID = 0;
+static uint16_t ipID = 0;  /* may be unnecessary, ok to set id 0? - tim */
 
 int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface) {
 
@@ -34,6 +36,9 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
 
   printf("*** -> Processing IP Packet\n");
   print_hdr_ip(packet + next_hdr);
+
+  /* Generate ethernet packet: used to get mac destination */
+  sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(packet);
 
   /* Create request IP Packet */
   sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(packet + next_hdr);
@@ -54,8 +59,6 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
 
     next_hdr += sizeof(sr_ip_hdr_t);
 
-    /* Generate ethernet packet: used to get mac destination */
-    sr_ethernet_hdr_t* request_eth = (sr_ethernet_hdr_t *)(packet);
 
     if (req_ip->ip_p == ip_protocol_icmp) { /* ICMP */
       if (len < next_hdr + sizeof(sr_icmp_hdr_t)) {
@@ -139,8 +142,8 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       response_eth->ether_type = htons(ethertype_ip);
 
       /* Swap mac addresses */
-      memcpy(response_eth->ether_dhost, request_eth->ether_shost, ETHER_ADDR_LEN);
-      memcpy(response_eth->ether_shost, request_eth->ether_dhost, ETHER_ADDR_LEN);
+      memcpy(response_eth->ether_dhost, req_eth->ether_shost, ETHER_ADDR_LEN);
+      memcpy(response_eth->ether_shost, req_eth->ether_dhost, ETHER_ADDR_LEN);
 
       printf("***-> Sending packet\n");
       print_hdrs(response_packet, response_length);  /* DEBUG */
@@ -156,8 +159,8 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     } else if (req_ip->ip_p == 6 || req_ip->ip_p == 17) {
       /* TCP or UDP */
 
-      if (sr_send_icmp_packet(sr, 3, 3, req_ip->ip_src, request_eth->ether_shost,
-                              req_ip, iface) == -1) {
+      if (sr_send_icmp_packet(sr, 3, 3, req_ip->ip_src, req_eth->ether_shost,
+                              (uint8_t *)req_ip, iface) == -1) {
         fprintf(stderr, "Failure sending ICMP message\n");
         return -1;
       }
@@ -180,6 +183,13 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
      */
     if (route == NULL) {
       printf("*** -> Route does not exist.  Forwarding terminated\n");
+
+      if (sr_send_icmp_packet(sr, 3, 0, req_ip->ip_src, req_eth->ether_shost,
+                              (uint8_t *)req_ip, iface) == -1) {
+        fprintf(stderr, "Failure sending ICMP message\n");
+        return -1;
+      }
+
       return -2;
     }
 
@@ -187,9 +197,17 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     req_ip->ip_ttl--;
     if (req_ip->ip_ttl == 0) {
       printf("*** -> Packet TTL expired.\n");
-      /* TODO(mark|tim|jon): Send back ICMP time exceeded */
-      sendExpiredICMP(sr, req_ip, len, iface);
-      return 0;
+      /* Send back ICMP time exceeded */
+
+      /* sendExpiredICMP(sr, req_ip, len, iface); sorry jon - tim */
+
+      if (sr_send_icmp_packet(sr, 11, 0, req_ip->ip_src, req_eth->ether_shost,
+                              (uint8_t *)req_ip, iface) == -1) {
+        fprintf(stderr, "Failure sending ICMP message\n");
+        return -1;
+      }
+
+      return 0;  /* -2? - tim */
     }
 
     struct sr_arpentry* arp_entry = sr_arpcache_lookup(arp_cache, route->gw.s_addr);
@@ -266,13 +284,13 @@ int sendExpiredICMP(struct sr_instance* sr, sr_ip_hdr_t* packet, unsigned int le
    /* increment ID number*/
    ipID++;
    
-   /* Fill in ICMP fields.
+   /* Fill in ICMP fields. */
    replyIcmpHeader->icmp_type = 11;
    replyIcmpHeader->icmp_code = 0;
    replyIcmpHeader->icmp_sum = 0;
-   memcpy(replyIcmpHeader->data, packet, 28);
+   /* memcpy(replyIcmpHeader->data, packet, 28); */
    replyIcmpHeader->icmp_sum = cksum(replyIcmpHeader, sizeof(sr_icmp_hdr_t));
-   
+
    /* send ICMP replyPacket*/
    
    free(replyPacket);
