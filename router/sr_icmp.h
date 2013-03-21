@@ -5,13 +5,13 @@
  *
  *---------------------------------------------------------------------------*/
 
-#ifndef sr_INTERFACE_H
-#define sr_INTERFACE_H
+#ifndef SR_INTERFACE_H
+#define SR_INTERFACE_H
 
 #include <stdint.h>
 
 #include "sr_router.h"
 
-int sr_send_icmp_packet(struct sr_instance* sr, uint8_t code, uint8_t type, uint32_t ip, unsigned char* mac, char* interface);
+int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t ip, unsigned char* mac, uint8_t* payload, char* interface);
 
 #endif

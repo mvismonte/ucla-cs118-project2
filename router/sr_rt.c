@@ -181,31 +181,42 @@ void sr_print_routing_entry(struct sr_rt* entry)
 /*---------------------------------------------------------------------
  * Method: sr_find_rt_entry
  *
- * Finds routing table entry by ip
+ * Finds LPM routing table entry by ip
  *---------------------------------------------------------------------*/
 
 struct sr_rt* sr_find_rt_entry(struct sr_instance* sr, uint32_t ip_dst) {
   struct sr_rt* rt_entry = 0;
+  struct sr_rt* rt_walker = 0;
+  uint16_t longest_mask = 0;
+  uint16_t mask = 0;
 
   if (sr->routing_table == 0) {
     fprintf(stderr, "Routing table empty\n");
     return 0;
   } else {
-    rt_entry = sr->routing_table;
+    rt_walker = sr->routing_table;
 
     fprintf(stderr, "*** -> Checking routing table\n");
-    while (rt_entry) {
-      sr_print_routing_entry(rt_entry);  /* DEBUG */
+    while (rt_walker) {
+      sr_print_routing_entry(rt_walker);  /* DEBUG */
 
       /* Check masked destination to routing table entry */
-      if ((ip_dst & (rt_entry->mask).s_addr) == (rt_entry->dest).s_addr) {
+      if ((ip_dst & (rt_walker->mask).s_addr) == (rt_walker->dest).s_addr) {
         /* Route found */
-        return rt_entry;
-      }
 
-      rt_entry = rt_entry->next;
+        /* Get mask in integer form */
+        mask = ntohl((rt_walker->mask).s_addr);
+
+        if (mask > longest_mask) {
+          /* Save route*/
+          rt_entry = rt_walker;
+
+          longest_mask = mask;
+        }
+      }
+      rt_walker = rt_walker->next;
     }
   }
-  return 0;
+  return rt_entry;
 } /* -- find_route -- */
 
