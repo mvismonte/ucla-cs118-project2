@@ -92,13 +92,13 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   time_t now = time(NULL);
   if (difftime(now, req->sent) >= 1.0) {
     if (req->times_sent >= 5) {
-      /* Send icmp host unreachable to source addr of all pkts waiting on this request */
-      /* TODO(Jon|Tim): Complete this? */
+      /* Send ICMP host unreachable to source address of all packets waiting
+          on this request
+      */
 
-      struct sr_packet *pkt = req->packets;
-
-      while (pkt) {
-        /* Generate ethernet packet: used to get mac destination */
+      struct sr_packet *pkt;
+      for (pkt = req->packets; pkt != NULL; pkt = pkt->next) {
+        /* Generate Ethernet packet: used to get mac destination */
         sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(pkt->buf);
 
         /* Create IP Packet */
@@ -107,13 +107,10 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
         if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, req_eth->ether_shost,
                                 (uint8_t *)req_ip, pkt->iface) == -1) {
           fprintf(stderr, "Failure sending ICMP message\n");
-        }
-
-        pkt = pkt->next;
+        }        
       }
 
-
-      /* Destroy ARP req */
+      /* Destroy ARP request */
       sr_arpreq_destroy(&(sr->cache), req);
     } else {
       /* Send an ARP request */
