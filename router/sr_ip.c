@@ -61,6 +61,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
         fprintf(stderr, "ICMP header: insufficient length\n");
         return -1;
       }
+      printf("*** -> Processing ICMP Packet\n");
 
       /* Create ICMP Packet */
       sr_icmp_hdr_t* req_icmp = (sr_icmp_hdr_t *)(packet + next_hdr);
@@ -76,6 +77,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       /* Process ICMP message */
       if (req_icmp->icmp_type != 8 || req_icmp->icmp_code != 0) {
         /* Drop packet if not echo request */
+        printf("*** -> ICMP wasn't type echo.  Dropping packet\n");
         return -1;
       }
 
@@ -130,6 +132,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       sr_ethernet_hdr_t* response_eth = (sr_ethernet_hdr_t *)(response_packet);
       response_eth->ether_type = htons(ethertype_ip);
 
+      printf("*** -> Sending ICMP ping reply\n");
       if (sr_send_packet_to_ip_addr(sr, response_packet, response_length,
           response_ip->ip_dst, iface) == -1) {
         fprintf(stderr, "Error sending packet\n");
@@ -141,6 +144,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
 
     } else if (req_ip->ip_p == 6 || req_ip->ip_p == 17) {
       /* TCP or UDP */
+      printf("*** -> TCP or UDP found.  Sending back ICMP type 3, code 3\n");
 
       if (sr_send_icmp_packet(sr, 3, 3, req_ip->ip_src, req_eth->ether_shost,
                               (uint8_t *)req_ip, iface) == -1) {
@@ -150,6 +154,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
 
     } else {
       /* Drop packet if other protocol */
+      printf("*** -> Protocol not found.  Dropping packet\n");
       return -1;
     }
 
