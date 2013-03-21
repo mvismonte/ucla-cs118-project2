@@ -49,7 +49,7 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
         /* Forward all packets waiting on req if req exists. */
         struct sr_packet* pckt = req ? req->packets : NULL;
         for (; pckt != NULL; pckt = pckt->next) {
-          sr_forward_eth_packet(sr, pckt->buf, pckt->len, arp_hdr->ar_sha, pckt->iface);
+          sr_eth_frame_send_with_mac(sr, pckt->buf, pckt->len, arp_hdr->ar_sha, pckt->iface);
         }
       } else if (op_code == arp_op_request) { /* Process ARP Request */
         printf("*** -> Processing ARP Request\n");
@@ -140,3 +140,22 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   }
   return 0;
 }
+
+int sr_eth_frame_send_with_mac(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface) {
+  printf("*** -> Forwarding Packet\n");
+
+  /* Created the packet */
+  sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
+  sr_ip_hdr_t* ip_hdr = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
+  struct sr_if* interface = sr_get_interface(sr, iface);
+
+  /* Set fields */
+  memcpy(e_packet->ether_dhost, mac, ETHER_ADDR_LEN);
+  memcpy(e_packet->ether_shost, interface->addr, ETHER_ADDR_LEN);
+
+  /* Send the packet */
+  print_hdrs(packet, len);
+  sr_send_packet(sr, packet, len, iface);
+  return 0;
+}
+

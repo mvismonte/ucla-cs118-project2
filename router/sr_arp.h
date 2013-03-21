@@ -18,4 +18,6 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int
 
 int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req);
 
+int sr_eth_frame_send_with_mac(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
+
 #endif
