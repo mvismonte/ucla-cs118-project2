@@ -12,6 +12,9 @@
 
 #include "sr_router.h"
 
+/* TODO(Tim): Write documentation for this function.  For an example, see
+    sr_arp.h
+*/
 int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface);
 
 #endif

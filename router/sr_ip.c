@@ -17,8 +17,9 @@
 #include "sr_icmp.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
-#include "sr_utils.h"
 #include "sr_rt.h"
+#include "sr_utils.h"
+
 
 int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface) {
 
@@ -84,6 +85,10 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       /* Set response length equal to request's */
       uint16_t response_length = len;
 
+      /* TODO(Tim): This code looks redundant.  We should probably use
+          sr_send_icmp_packet to send the ping so we don't do all of
+          this repeated work.  DRY DRY DRY
+      */
       /* Create Ethernet packet with ICMP */
       uint8_t* response_packet = (uint8_t *)malloc(response_length);
 

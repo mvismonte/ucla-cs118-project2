@@ -13,13 +13,12 @@
 
 #include "sr_arp.h"
 
+#include "sr_icmp.h"
 #include "sr_if.h"
 #include "sr_ip.h"
-#include "sr_icmp.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
 
-/* TODO(mark): TEST THIS FUNCITON SOMEHOW */
 int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, char* iface) {
 
   if (len < sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t)) {
