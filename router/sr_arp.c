@@ -148,11 +148,10 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
 
       /* Send the request */
       printf("*** -> Sending out ARP Request\n");
-      /* print_hdrs(frame, len); */
       sr_send_packet(sr, frame, len, iface->name);
       free(frame);
 
-      /* Increment req information */
+      /* Increment request information */
       req->sent = now;
       req->times_sent++;
     }
@@ -161,11 +160,10 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
 }
 
 int sr_eth_frame_send_with_mac(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface) {
-  printf("*** -> Forwarding Packet\n");
+  printf("*** -> Sending Packet\n");
 
-  /* Created the packet */
+  /* Cast the packet in order to update fields. */
   sr_ethernet_hdr_t* e_packet = (sr_ethernet_hdr_t *)(packet);
-  sr_ip_hdr_t* ip_hdr = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
   struct sr_if* interface = sr_get_interface(sr, iface);
 
   /* Set fields */
@@ -178,3 +176,26 @@ int sr_eth_frame_send_with_mac(struct sr_instance* sr, uint8_t* packet, unsigned
   return 0;
 }
 
+int sr_send_packet_to_ip_addr(struct sr_instance* sr,
+    uint8_t* packet,
+    unsigned int len,
+    uint32_t dest_ip,
+    char* iface) {
+  struct sr_arpentry* arp_entry = sr_arpcache_lookup(&(sr->cache), dest_ip);
+
+  if (arp_entry) {
+    printf("*** -> ARP Cache Hit\n");
+    /* Forward the packet */
+    sr_eth_frame_send_with_mac(sr, packet, len, arp_entry->mac, iface);
+
+    /* Free ARP entry */
+    free(arp_entry);
+  } else {
+    printf("*** -> ARP Cache Miss\n");
+    struct sr_arpreq* req = sr_arpcache_queuereq(&(sr->cache), dest_ip, packet, len, iface);
+    req->iface = iface;
+    sr_handle_arpreq(sr, req);
+  }
+
+  return 0;
+}
