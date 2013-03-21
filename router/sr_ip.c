@@ -31,7 +31,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
   }
 
   printf("*** -> Processing IP Packet\n");
-  print_hdr_ip(packet + next_hdr);
+  /* DEBUG only print_hdr_ip(packet + next_hdr); */
 
   /* Generate ethernet packet: used to get mac destination */
   sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(packet);

@@ -90,6 +90,11 @@ int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint
   printf("***-> Sending packet\n");
   print_hdrs(response_packet, response_length);  /* DEBUG */
 
+  /* TODO(Tim): Switch this so that it uses sr_send_packet_to_ip_addr in 
+      sr_arp.c.  Don't worry about filling in the Ethernet MAC address info.
+      The function will take care of this for you because you pass in the
+      target IP address and the source interface.
+  */
   if (sr_send_packet(sr, response_packet, response_length, interface) == -1) {
     fprintf(stderr, "Error sending packet\n");
     return -1;
