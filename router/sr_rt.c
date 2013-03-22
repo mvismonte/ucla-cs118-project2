@@ -185,41 +185,36 @@ void sr_print_routing_entry(struct sr_rt* entry)
  *---------------------------------------------------------------------*/
 
 struct sr_rt* sr_find_rt_entry(struct sr_instance* sr, uint32_t ip_dst) {
-  struct sr_rt* rt_entry = 0;
-  struct sr_rt* rt_walker = 0;
-  uint16_t longest_mask = 0;
-  uint16_t mask = 0;
+    /* Requires */
+    assert(sr);
 
-  if (sr->routing_table == 0) {
-    fprintf(stderr, "Routing table empty\n");
-    return 0;
-  } else {
-    rt_walker = sr->routing_table;
-
-    fprintf(stderr, "*** -> Checking routing table\n");
-    while (rt_walker) {
-      sr_print_routing_entry(rt_walker);  /* DEBUG */
-
-      /* Check masked destination to routing table entry */
-      if ((ip_dst & (rt_walker->mask).s_addr) ==
-          (rt_walker->dest).s_addr & (rt_walker->mask).s_addr) {
-        /* Route found */
-
-        /* Get mask in integer form */
-        mask = ntohl((rt_walker->mask).s_addr);
-
-        /* Compare to determine longest prefix match */
-        if (mask > longest_mask) {
-          /* Save route*/
-          rt_entry = rt_walker;
-
-          longest_mask = mask;
-        }
-      }
-      rt_walker = rt_walker->next;
+    if (sr->routing_table == 0) {
+        fprintf(stderr, "*** -> Routing table empty\n");
+        return 0;
     }
-  }
-  return rt_entry;
+
+    struct sr_rt* rt_entry = 0;
+    struct sr_rt* rt_walker = sr->routing_table;
+    uint16_t longest_mask = 0;
+    uint16_t mask = 0;
+
+    while (rt_walker) {
+        /* Check masked destination to routing table entry */
+        if ((ip_dst & (rt_walker->mask).s_addr) ==
+            ((rt_walker->dest).s_addr & (rt_walker->mask).s_addr)) {
+            /* Get mask in integer form */
+            mask = ntohl((rt_walker->mask).s_addr);
+
+            /* Compare to determine longest prefix match */
+            if (mask > longest_mask) {
+                /* Save route*/
+                rt_entry = rt_walker;
+
+                longest_mask = mask;
+            }
+        }
+        rt_walker = rt_walker->next;
+    }
+    return rt_entry;
 
 } /* -- sr_find_rt_entry -- */
-
