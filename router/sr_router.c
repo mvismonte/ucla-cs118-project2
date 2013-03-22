@@ -14,12 +14,14 @@
 #include <stdio.h>
 #include <assert.h>
 
-
-#include "sr_if.h"
-#include "sr_rt.h"
 #include "sr_router.h"
-#include "sr_protocol.h"
+
+#include "sr_arp.h"
 #include "sr_arpcache.h"
+#include "sr_if.h"
+#include "sr_ip.h"
+#include "sr_protocol.h"
+#include "sr_rt.h"
 #include "sr_utils.h"
 
 /*---------------------------------------------------------------------
@@ -78,7 +80,29 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n",len);
 
-  /* fill in code here */
+  print_hdr_eth(packet);  /* DEBUG */
 
-}/* end sr_ForwardPacket */
+  if (len < sizeof(sr_ethernet_hdr_t)) {
+    fprintf(stderr, "ETHERNET header: insufficient length\n");
+    return;
+  }
+
+  uint16_t ethtype = ethertype(packet);
+
+  if (ethtype == ethertype_ip) { /* IP */
+    if (sr_process_ip_packet(sr, packet, len, interface)  == -1) {
+      fprintf(stderr, "There was an error processing the IP packet\n");
+    }
+  }
+  else if (ethtype == ethertype_arp) { /* ARP */
+    if (sr_process_arp_packet(sr, packet, len, interface)  == -1) {
+      fprintf(stderr, "There was an error processing the ARP packet\n");
+    }
+  }
+  else {
+    fprintf(stderr, "Unrecognized Ethernet Type: %d\n", ethtype);
+    return;
+  }
+
+}/* end sr_handlepacket */
 

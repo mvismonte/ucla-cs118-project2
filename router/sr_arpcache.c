@@ -6,7 +6,10 @@
 #include <pthread.h>
 #include <sched.h>
 #include <string.h>
+
 #include "sr_arpcache.h"
+
+#include "sr_arp.h"
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
@@ -17,7 +20,11 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
+  /* Go through all of the requests and reprocess them */
+  struct sr_arpreq* req = sr->cache.requests;
+  for (; req != NULL; req = req->next) {
+    sr_handle_arpreq(sr, req);
+  }
 }
 
 /* You should not need to touch the rest of this code. */
@@ -47,6 +54,7 @@ struct sr_arpentry *sr_arpcache_lookup(struct sr_arpcache *cache, uint32_t ip) {
     
     return copy;
 }
+
 
 /* Adds an ARP request to the ARP request queue. If the request is already on
    the queue, adds the packet to the linked list of packets for this sr_arpreq
