@@ -12,9 +12,15 @@
 
 #include "sr_router.h"
 
-/* TODO(Tim): Write documentation for this function.  For an example, see
-    sr_arp.h
+/* sr_process_ip_packet
+  Processes an IP datagram, detecting if it is to be forwarded or to one of our
+  interfaces.  ICMP responses are generated in case of error or ping reply.
 */
-int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface);
+int sr_process_ip_packet(
+  struct sr_instance* sr,
+  uint8_t* packet,
+  unsigned int len,
+  char* iface
+);
 
 #endif

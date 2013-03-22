@@ -201,12 +201,14 @@ struct sr_rt* sr_find_rt_entry(struct sr_instance* sr, uint32_t ip_dst) {
       sr_print_routing_entry(rt_walker);  /* DEBUG */
 
       /* Check masked destination to routing table entry */
-      if ((ip_dst & (rt_walker->mask).s_addr) == (rt_walker->dest).s_addr) {
+      if ((ip_dst & (rt_walker->mask).s_addr) ==
+          (rt_walker->dest).s_addr & (rt_walker->mask).s_addr) {
         /* Route found */
 
         /* Get mask in integer form */
         mask = ntohl((rt_walker->mask).s_addr);
 
+        /* Compare to determine longest prefix match */
         if (mask > longest_mask) {
           /* Save route*/
           rt_entry = rt_walker;
@@ -218,5 +220,6 @@ struct sr_rt* sr_find_rt_entry(struct sr_instance* sr, uint32_t ip_dst) {
     }
   }
   return rt_entry;
-} /* -- find_route -- */
+
+} /* -- sr_find_rt_entry -- */
 

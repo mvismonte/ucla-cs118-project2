@@ -34,9 +34,6 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
   printf("*** -> Processing IP Packet\n");
   /* DEBUG only print_hdr_ip(packet + next_hdr); */
 
-  /* Generate ethernet packet: used to get mac destination */
-  sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(packet);
-
   /* Create request IP Packet */
   sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(packet + next_hdr);
 
@@ -151,8 +148,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       /* TCP or UDP */
       printf("*** -> TCP or UDP found.  Sending back ICMP type 3, code 3\n");
 
-      if (sr_send_icmp_packet(sr, 3, 3, req_ip->ip_src, req_eth->ether_shost,
-                              (uint8_t *)req_ip, iface) == -1) {
+      if (sr_send_icmp_packet(sr, 3, 3, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
         fprintf(stderr, "Failure sending ICMP message\n");
         return -1;
       }
@@ -174,8 +170,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     if (route == NULL) {
       printf("*** -> Route does not exist.  Forwarding terminated\n");
 
-      if (sr_send_icmp_packet(sr, 3, 0, req_ip->ip_src, req_eth->ether_shost,
-                              (uint8_t *)req_ip, iface) == -1) {
+      if (sr_send_icmp_packet(sr, 3, 0, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
         fprintf(stderr, "Failure sending ICMP message\n");
         return -1;
       }
@@ -188,8 +183,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     if (req_ip->ip_ttl == 0) {
       /* Send back ICMP time exceeded */
       printf("*** -> Packet TTL expired.\n");
-      if (sr_send_icmp_packet(sr, 11, 0, req_ip->ip_src, req_eth->ether_shost,
-          (uint8_t *)req_ip, iface) == -1) {
+      if (sr_send_icmp_packet(sr, 11, 0, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
         fprintf(stderr, "Failure sending ICMP message\n");
         return -1;
       }

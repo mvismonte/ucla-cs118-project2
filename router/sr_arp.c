@@ -105,8 +105,7 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
         /* Create IP Packet */
         sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(pkt->buf + sizeof(sr_ethernet_hdr_t));
 
-        if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, req_eth->ether_shost,
-                                (uint8_t *)req_ip, pkt->iface) == -1) {
+        if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, (uint8_t *)req_ip, pkt->iface) == -1) {
           fprintf(stderr, "Failure sending ICMP message\n");
         }
       }

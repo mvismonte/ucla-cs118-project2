@@ -17,11 +17,10 @@
 #include "sr_rt.h"
 #include "sr_utils.h"
 
-int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t ip, unsigned char* mac, uint8_t* payload, char* interface) {
+int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t ip, uint8_t* payload, char* interface) {
   /* ip should be in network byte order */
 
   assert(sr);
-  assert(mac);
   assert(payload);
   assert(interface);
 

@@ -194,7 +194,12 @@ void sr_print_if(struct sr_if* iface)
 } /* -- sr_print_if -- */
 
 
-/* Helper Function */
+/*---------------------------------------------------------------------
+ * Method: sr_find_interface
+ *
+ * Finds interface by ip
+ *---------------------------------------------------------------------*/
+
 struct sr_if* sr_find_interface(struct sr_instance* sr, uint32_t ip_dst) {
   struct sr_if* if_entry = 0;
 
