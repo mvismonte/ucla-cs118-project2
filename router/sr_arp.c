@@ -95,6 +95,7 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
       /* Send ICMP host unreachable to source address of all packets waiting
           on this request
       */
+      printf("*** -> (Timer) Request Host unreachable\n");
 
       struct sr_packet *pkt;
       for (pkt = req->packets; pkt != NULL; pkt = pkt->next) {
@@ -107,7 +108,7 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
         if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, req_eth->ether_shost,
                                 (uint8_t *)req_ip, pkt->iface) == -1) {
           fprintf(stderr, "Failure sending ICMP message\n");
-        }        
+        }
       }
 
       /* Destroy ARP request */
@@ -119,6 +120,10 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
       sr_ethernet_hdr_t* ether_hdr = (struct sr_ethernet_hdr*) frame;
       sr_arp_hdr_t* arp_frame = (sr_arp_hdr_t*) (frame + sizeof(sr_ethernet_hdr_t));
       struct sr_if* iface = sr_get_interface(sr, req->iface);
+
+      /* Debug */
+      fprintf(stderr, "*** -> (Timer) Re-sending ARP Request: ");
+      print_addr_ip_int(ntohl(req->ip));
 
       /* Set Ethernet type to ARP */
       ether_hdr->ether_type = htons(ethertype_arp);
@@ -134,7 +139,6 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
       memcpy(ether_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
       
       /* Set target data */
-      /* Just using the first interface in the list.  Is this okay? =\ */
       arp_frame->ar_tip = req->ip;
       int i;
       for (i = 0; i < ETHER_ADDR_LEN; i++) {
