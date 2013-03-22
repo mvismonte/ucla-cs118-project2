@@ -11,10 +11,10 @@
 
 #include "sr_icmp.h"
 
+#include "sr_arp.h"
 #include "sr_if.h"
-#include "sr_utils.h"
-
 #include "sr_router.h"
+#include "sr_utils.h"
 
 int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t ip, unsigned char* mac, uint8_t* payload, char* interface) {
   /* ip should be in network byte order */
@@ -83,10 +83,6 @@ int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint
 
   response_eth->ether_type = htons(ethertype_ip);
 
-  /* Set mac addresses */
-  memcpy(response_eth->ether_dhost, mac, ETHER_ADDR_LEN);
-  memcpy(response_eth->ether_shost, sender->addr, ETHER_ADDR_LEN);
-
   printf("***-> Sending packet\n");
   print_hdrs(response_packet, response_length);  /* DEBUG */
 
@@ -95,7 +91,7 @@ int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint
       The function will take care of this for you because you pass in the
       target IP address and the source interface.
   */
-  if (sr_send_packet(sr, response_packet, response_length, interface) == -1) {
+  if (sr_send_packet_to_ip_addr(sr, response_packet, response_length, ip, interface) == -1) {
     fprintf(stderr, "Error sending packet\n");
     return -1;
   }
