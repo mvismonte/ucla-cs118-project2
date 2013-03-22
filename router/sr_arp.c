@@ -17,7 +17,6 @@
 #include "sr_if.h"
 #include "sr_ip.h"
 #include "sr_protocol.h"
-#include "sr_rt.h"
 #include "sr_utils.h"
 
 int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, char* iface) {
@@ -106,15 +105,8 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
         /* Create IP Packet */
         sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(pkt->buf + sizeof(sr_ethernet_hdr_t));
 
-        /* Find a route to new IP address */
-        struct sr_rt* route = sr_find_rt_entry(sr, req_ip->ip_src);
-        if (route == NULL) {
-          fprintf(stderr, "(Unreachable) Could not find route back to original sender\n");
-          continue;
-        }
-
         if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, req_eth->ether_shost,
-                                (uint8_t *)req_ip, route->interface) == -1) {
+                                (uint8_t *)req_ip, pkt->iface) == -1) {
           fprintf(stderr, "Failure sending ICMP message\n");
         }
       }

@@ -14,6 +14,7 @@
 #include "sr_arp.h"
 #include "sr_if.h"
 #include "sr_router.h"
+#include "sr_rt.h"
 #include "sr_utils.h"
 
 int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t ip, unsigned char* mac, uint8_t* payload, char* interface) {
@@ -91,7 +92,15 @@ int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint
       The function will take care of this for you because you pass in the
       target IP address and the source interface.
   */
-  if (sr_send_packet_to_ip_addr(sr, response_packet, response_length, ip, interface) == -1) {
+
+  /* Find a route to new IP address */
+  struct sr_rt* route = sr_find_rt_entry(sr, ip);
+  if (route == NULL) {
+    fprintf(stderr, "(Unreachable) Could not find route back to original sender\n");
+    return -1;
+  }
+
+  if (sr_send_packet_to_ip_addr(sr, response_packet, response_length, ip, route->interface) == -1) {
     fprintf(stderr, "Error sending packet\n");
     return -1;
   }
