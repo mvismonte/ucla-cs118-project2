@@ -80,10 +80,10 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n", len);
 
-  print_hdr_eth(packet);  /* DEBUG */
+  /* DEBUG only print_hdr_eth(packet); */
 
   if (len < sizeof(sr_ethernet_hdr_t)) {
-    fprintf(stderr, "*** -> Error: Ethernet header - insufficient length\n");
+    fprintf(stderr, "Error: Ethernet header - insufficient length\n");
     return;
   }
 
@@ -91,16 +91,16 @@ void sr_handlepacket(struct sr_instance* sr,
 
   if (ethtype == ethertype_ip) { /* IP */
     if (sr_process_ip_packet(sr, packet, len, interface)  == -1) {
-      fprintf(stderr, "*** -> Error processing IP datagram\n");
+      fprintf(stderr, "Error processing IP datagram\n");
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
     if (sr_process_arp_packet(sr, packet, len, interface)  == -1) {
-      fprintf(stderr, "*** -> Error processing ARP packet\n");
+      fprintf(stderr, "Error processing ARP packet\n");
     }
   }
   else {
-    fprintf(stderr, "*** -> Unrecognized Ethernet Type: %d\n", ethtype);
+    fprintf(stderr, "Error: Unrecognized Ethernet Type: %d\n", ethtype);
   }
 
 } /* end sr_handlepacket */

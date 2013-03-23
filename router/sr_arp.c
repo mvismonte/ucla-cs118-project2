@@ -19,10 +19,18 @@
 #include "sr_protocol.h"
 #include "sr_utils.h"
 
-int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int len, char* iface) {
+int sr_process_arp_packet(
+    struct sr_instance* sr,
+    uint8_t *packet,
+    unsigned int len,
+    char* iface) {
+
+  assert(sr);
+  assert(packet);
+  assert(iface);
 
   if (len < sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t)) {
-    fprintf(stderr, "ARP header: insufficient length\n");
+    fprintf(stderr, "Error: ARP header - insufficient length\n");
     return -1;
   }
   printf("*** -> ARP Packet Processing Initiated\n");
@@ -44,12 +52,14 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
         printf("*** -> Processing ARP Reply\n");
 
         /* See if there's an ARP request in the queue. */
-        struct sr_arpreq* req = sr_arpcache_insert(&(sr->cache), arp_hdr->ar_sha, arp_hdr->ar_sip);
+        struct sr_arpreq* req = sr_arpcache_insert(
+            &(sr->cache), arp_hdr->ar_sha, arp_hdr->ar_sip);
 
         /* Forward all packets waiting on req if req exists. */
         struct sr_packet* pckt = req ? req->packets : NULL;
         for (; pckt != NULL; pckt = pckt->next) {
-          sr_eth_frame_send_with_mac(sr, pckt->buf, pckt->len, arp_hdr->ar_sha, pckt->iface);
+          sr_eth_frame_send_with_mac(
+              sr, pckt->buf, pckt->len, arp_hdr->ar_sha, pckt->iface);
         }
       } else if (op_code == arp_op_request) { /* Process ARP Request */
         printf("*** -> Processing ARP Request\n");
@@ -76,7 +86,8 @@ int sr_process_arp_packet(struct sr_instance* sr, uint8_t *packet, unsigned int 
         return -1;
       }
     } else {
-      fprintf(stderr, "ARP interface names didn't match: %s, %s\n", interface->name, iface);
+      fprintf(stderr, "ARP interface names didn't match: %s, %s\n",
+          interface->name, iface);
       return -1;
     }
   } else {
@@ -103,9 +114,11 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
         sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(pkt->buf);
 
         /* Create IP Packet */
-        sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(pkt->buf + sizeof(sr_ethernet_hdr_t));
+        sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(pkt->buf +
+                                              sizeof(sr_ethernet_hdr_t));
 
-        if (sr_send_icmp_packet(sr, 3, 1, req_ip->ip_src, (uint8_t *)req_ip, pkt->iface) == -1) {
+        if (sr_send_icmp_packet(
+            sr, 3, 1, req_ip->ip_src, (uint8_t *)req_ip, pkt->iface) == -1) {
           fprintf(stderr, "Failure sending ICMP message\n");
         }
       }
@@ -117,11 +130,12 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
       int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
       uint8_t* frame = malloc(len);
       sr_ethernet_hdr_t* ether_hdr = (struct sr_ethernet_hdr*) frame;
-      sr_arp_hdr_t* arp_frame = (sr_arp_hdr_t*) (frame + sizeof(sr_ethernet_hdr_t));
+      sr_arp_hdr_t* arp_frame = (sr_arp_hdr_t*) (frame +
+                                                 sizeof(sr_ethernet_hdr_t));
       struct sr_if* iface = sr_get_interface(sr, req->iface);
 
       /* Debug */
-      fprintf(stderr, "*** -> (Timer) Re-sending ARP Request: ");
+      printf("*** -> (Timer) Re-sending ARP Request: ");
       print_addr_ip_int(ntohl(req->ip));
 
       /* Set Ethernet type to ARP */
@@ -158,7 +172,13 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
   return 0;
 }
 
-int sr_eth_frame_send_with_mac(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface) {
+int sr_eth_frame_send_with_mac(
+    struct sr_instance* sr,
+    uint8_t* packet,
+    unsigned int len,
+    unsigned char* mac,
+    char* iface) {
+
   printf("*** -> Sending Packet\n");
 
   /* Cast the packet in order to update fields. */
@@ -191,7 +211,8 @@ int sr_send_packet_to_ip_addr(struct sr_instance* sr,
     free(arp_entry);
   } else {
     printf("*** -> ARP Cache Miss\n");
-    struct sr_arpreq* req = sr_arpcache_queuereq(&(sr->cache), dest_ip, packet, len, iface);
+    struct sr_arpreq* req = sr_arpcache_queuereq(
+        &(sr->cache), dest_ip, packet, len, iface);
     req->iface = iface;
     sr_handle_arpreq(sr, req);
   }

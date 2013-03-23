@@ -205,7 +205,7 @@ struct sr_if* sr_find_interface(struct sr_instance* sr, uint32_t ip_dst) {
     assert(sr);
 
     if (sr->if_list == 0) {
-        fprintf(stderr, "*** -> Interfaces empty\n");
+        printf(" Interface list empty\n");
         return NULL;
     }
 

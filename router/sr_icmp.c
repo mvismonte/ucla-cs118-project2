@@ -17,14 +17,19 @@
 #include "sr_rt.h"
 #include "sr_utils.h"
 
-int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t ip, uint8_t* payload, char* interface) {
-  /* ip should be in network byte order */
+int sr_send_icmp_packet(
+    struct sr_instance* sr,
+    uint8_t type, uint8_t code,
+    uint32_t ip, /* ip should be in network byte order */
+    uint8_t* payload,
+    char* interface) {
 
   assert(sr);
   assert(payload);
   assert(interface);
 
   if (type != 3 && type != 11) {
+    printf("*** -> ICMP wasn't type 3 or 11.  Stopping send\n");
     return -1;
   }
 
@@ -56,7 +61,6 @@ int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint
                                              sizeof(sr_ethernet_hdr_t));
 
   /* Get interface */
-  printf("Sender interface: %s\n", interface);
   struct sr_if* sender = sr_get_interface(sr, interface);
 
   /* Set src and dst addresses */
@@ -83,23 +87,15 @@ int sr_send_icmp_packet(struct sr_instance* sr, uint8_t type, uint8_t code, uint
 
   response_eth->ether_type = htons(ethertype_ip);
 
-  printf("***-> Sending packet\n");
-  print_hdrs(response_packet, response_length);  /* DEBUG */
-
-  /* TODO(Tim): Switch this so that it uses sr_send_packet_to_ip_addr in 
-      sr_arp.c.  Don't worry about filling in the Ethernet MAC address info.
-      The function will take care of this for you because you pass in the
-      target IP address and the source interface.
-  */
-
-  /* Find a route to new IP address */
+  /* Find a route to destination IP address */
   struct sr_rt* route = sr_find_rt_entry(sr, ip);
   if (route == NULL) {
-    fprintf(stderr, "(Unreachable) Could not find route back to original sender\n");
+    fprintf(stderr, "(Unreachable) Could not find route to original sender\n");
     return -1;
   }
 
-  if (sr_send_packet_to_ip_addr(sr, response_packet, response_length, ip, route->interface) == -1) {
+  if (sr_send_packet_to_ip_addr(
+      sr, response_packet, response_length, ip, route->interface) == -1) {
     fprintf(stderr, "Error sending packet\n");
     return -1;
   }

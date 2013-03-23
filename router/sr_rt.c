@@ -189,7 +189,7 @@ struct sr_rt* sr_find_rt_entry(struct sr_instance* sr, uint32_t ip_dst) {
     assert(sr);
 
     if (sr->routing_table == 0) {
-        fprintf(stderr, "*** -> Routing table empty\n");
+        printf(" Routing table empty\n");
         return 0;
     }
 

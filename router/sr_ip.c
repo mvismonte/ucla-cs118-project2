@@ -20,8 +20,15 @@
 #include "sr_rt.h"
 #include "sr_utils.h"
 
+int sr_process_ip_packet(
+    struct sr_instance* sr,
+    uint8_t* packet,
+    unsigned int len,
+    char* iface) {
 
-int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* iface) {
+  assert(sr);
+  assert(packet);
+  assert(iface);
 
   /* Start of next header: add to packet head */
   unsigned int next_hdr = sizeof(sr_ethernet_hdr_t);
@@ -41,7 +48,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
   req_ip->ip_sum = 0;
 
   if (cksum(packet + next_hdr, sizeof(sr_ip_hdr_t)) != req_cksum) {
-    fprintf(stderr, "IP: invalid checksum\n");
+    fprintf(stderr, "Error: IP header - invalid checksum\n");
     return -1;
   }
 
@@ -53,10 +60,9 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
 
     next_hdr += sizeof(sr_ip_hdr_t);
 
-
     if (req_ip->ip_p == ip_protocol_icmp) { /* ICMP */
       if (len < next_hdr + sizeof(sr_icmp_hdr_t)) {
-        fprintf(stderr, "ICMP header: insufficient length\n");
+        fprintf(stderr, "Error: ICMP header - insufficient length\n");
         return -1;
       }
       printf("*** -> Processing ICMP Packet\n");
@@ -68,7 +74,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       req_icmp->icmp_sum = 0;
 
       if (cksum(packet + next_hdr, len - next_hdr) != req_icmp_cksum) {
-        fprintf(stderr, "ICMP: invalid checksum\n");
+        fprintf(stderr, "Error: ICMP header - invalid checksum\n");
         return -1;
       }
 
@@ -90,7 +96,8 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       uint8_t* response_packet = (uint8_t *)malloc(response_length);
 
       /* Copy over packet ICMP header + body */
-      memcpy(response_packet + next_hdr, packet + next_hdr, response_length - next_hdr);
+      memcpy(response_packet + next_hdr, packet + next_hdr,
+             response_length - next_hdr);
 
       /*
         Populate ICMP Message
@@ -148,8 +155,9 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
       /* TCP or UDP */
       printf("*** -> TCP or UDP found.  Sending back ICMP type 3, code 3\n");
 
-      if (sr_send_icmp_packet(sr, 3, 3, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
-        fprintf(stderr, "Failure sending ICMP message\n");
+      if (sr_send_icmp_packet(
+          sr, 3, 3, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
+        fprintf(stderr, "Error: Failure sending ICMP message (3,3)\n");
         return -1;
       }
 
@@ -170,8 +178,9 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     if (route == NULL) {
       printf("*** -> Route does not exist.  Forwarding terminated\n");
 
-      if (sr_send_icmp_packet(sr, 3, 0, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
-        fprintf(stderr, "Failure sending ICMP message\n");
+      if (sr_send_icmp_packet(
+          sr, 3, 0, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
+        fprintf(stderr, "Error: Failure sending ICMP message (3,0)\n");
         return -1;
       }
 
@@ -183,8 +192,9 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     if (req_ip->ip_ttl == 0) {
       /* Send back ICMP time exceeded */
       printf("*** -> Packet TTL expired.\n");
-      if (sr_send_icmp_packet(sr, 11, 0, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
-        fprintf(stderr, "Failure sending ICMP message\n");
+      if (sr_send_icmp_packet(
+          sr, 11, 0, req_ip->ip_src, (uint8_t *)req_ip, iface) == -1) {
+        fprintf(stderr, "Error: Failure sending ICMP message (11,0)\n");
         return -1;
       }
       return 0;
@@ -197,7 +207,7 @@ int sr_process_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
     /* Send the packet to the correct IP */
     if (sr_send_packet_to_ip_addr(sr, packet, len, route->gw.s_addr,
         route->interface) != 0) {
-      fprintf(stderr, "Failure from sr_send_packet_to_ip_addr\n");
+      fprintf(stderr, "Error: Failure from sr_send_packet_to_ip_addr\n");
       return -1;
     }
   }
