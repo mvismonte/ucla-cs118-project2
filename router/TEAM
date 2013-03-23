@@ -1,0 +1,14 @@
+UCLA CS 118
+Project 2
+Winter 2013
+Authors: Mark Vismonte, Timothy Wang, Jonathan Li
+Date: 03/22/2013
+
+Jonathan Li
+Worked on ICMP messages and error checking
+
+Mark Vismonte
+Worked largely on ARP and sending packets
+
+Timothy Wang
+Worked on handling IP packets and sending packets
