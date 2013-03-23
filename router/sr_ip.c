@@ -210,6 +210,7 @@ int sr_process_ip_packet(
       fprintf(stderr, "Error: Failure from sr_send_packet_to_ip_addr\n");
       return -1;
     }
+    printf("*** -> Packet forwarded\n");
   }
 
   return 0;
