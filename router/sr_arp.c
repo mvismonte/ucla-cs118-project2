@@ -110,8 +110,6 @@ int sr_handle_arpreq(struct sr_instance* sr, struct sr_arpreq* req) {
 
       struct sr_packet *pkt;
       for (pkt = req->packets; pkt != NULL; pkt = pkt->next) {
-        /* Generate Ethernet packet: used to get mac destination */
-        sr_ethernet_hdr_t* req_eth = (sr_ethernet_hdr_t *)(pkt->buf);
 
         /* Create IP Packet */
         sr_ip_hdr_t *req_ip = (sr_ip_hdr_t *)(pkt->buf +
